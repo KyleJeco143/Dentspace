@@ -179,7 +179,7 @@ h1,h2,h3,p{margin:0}
       <div class="sum-row"><span>Date</span><b id="sDay" class="empty">Not chosen</b></div>
       <div class="sum-row"><span>Time</span><b id="sTime" class="empty">Not chosen</b></div>
       <button class="btn primary" id="submit" type="submit" form="form" style="margin-top:14px" disabled>Book appointment</button>
-      <p class="fine">Preview with sample availability. No real booking is made.</p>
+      <p class="fine">We use your details only to manage this appointment.</p>
     </aside>
   </div>
 </main>
@@ -220,19 +220,16 @@ const fmt=(dk,o)=>new Intl.DateTimeFormat("en-PH",{timeZone:TZ,...o}).format(noo
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-/* Sample existing bookings so availability looks realistic (deterministic per day). */
-function sampleBusy(dk){
-  let h=0; for(const c of dk) h=(h*31+c.charCodeAt(0))>>>0;
-  const {open,close}=hoursOf(dk), out=[];
-  let m=open+((h%4)*15);
-  while(m<close-30){ h=(Math.imul(h,1103515245)+12345)>>>0; const dur=[30,45,60,120][h%4]; if(h%3!==0 && m+dur<=close) out.push([+new Date(at(dk,m)),+new Date(at(dk,m+dur))]); m+=dur+15*(1+(h>>>5)%4); }
-  return out;
+/* Availability comes from the server, so bookings made by anyone (or entered by staff) block the slot. */
+let BUSY=[];
+async function loadBusy(){
+  try{ const r=await fetch("api/availability.php",{cache:"no-store"}); if(!r.ok) throw new Error(); const j=await r.json(); BUSY=j.busy.map(([a,b])=>[+new Date(a),+new Date(b)]); return true; }
+  catch{ BUSY=null; return false; }
 }
-const KEY="dentspace-book-demo-v1";
-function mine(){ try{ const v=JSON.parse(localStorage.getItem(KEY)||"[]"); return Array.isArray(v)?v:[]; }catch{ return []; } }
-function saveMine(list){ try{ localStorage.setItem(KEY,JSON.stringify(list)); }catch{ /* storage unavailable */ } }
-function busyOn(dk){ return sampleBusy(dk).concat(mine().filter(b=>dayKey(b.start)===dk).map(b=>[+new Date(b.start),+new Date(b.end)])); }
+function busyOn(dk){ return (BUSY||[]).filter(([a])=>dayKey(a)===dk); }
+const refresh=()=>{ renderDays(); renderSlots(); sync(); };
 function freeSlots(dk,dur){
+  if(BUSY===null) return [];
   const {open,close}=hoursOf(dk), busy=busyOn(dk), cutoff=Date.now()+LEAD_MIN*60000, out=[];
   for(let m=open;m+dur<=close;m+=15){ const s=+new Date(at(dk,m)), e=s+dur*60000; if(s<cutoff) continue; if(busy.some(([a,b])=>s<b&&e>a)) continue; out.push(m); }
   return out;
@@ -305,14 +302,19 @@ $("#form").addEventListener("submit",async e=>{
   const btns=[$("#submit"),$("#mSubmit")], labels=btns.map(b=>b.textContent);
   const restore=()=>{ state.busy=false; btns.forEach((b,i)=>b.textContent=labels[i]); sync(); };
   state.busy=true; sync(); btns.forEach(b=>b.innerHTML='<span class="spin" aria-hidden="true"></span>Booking');
-  await new Promise(r=>setTimeout(r,700)); // simulated network round trip
-  // Re-check right before saving; production does this inside a DB transaction.
-  if(!freeSlots(state.day,s.dur).includes(state.time)){ state.time=null; restore(); renderSlots(); fail("Someone just booked that time. Please pick another."); go("#timeStep"); return; }
-  const dup=mine().find(b=>b.mobile===mob && dayKey(b.start)===state.day);
-  if(dup){ restore(); fail(`You already have a booking on this day (reference ${dup.ref}). Reply to your confirmation text to change it.`); return; }
-  const start=at(state.day,state.time), end=at(state.day,state.time+s.dur);
-  const ref=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(16).slice(2)+"000000").replace(/-/g,"").slice(0,6).toUpperCase();
-  const list=mine(); list.push({ref,serviceId:s.id,start,end,name,mobile:mob,createdAt:new Date().toISOString()}); saveMine(list);
+  const start=at(state.day,state.time);
+  let ref;
+  try{
+    const res=await fetch("api/book.php",{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"dentspace"},body:JSON.stringify({serviceId:s.id,start,name,mobile:mob,consent:true,website:$("#website").value})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){
+      restore();
+      if(data.code==="slot_taken"){ state.time=null; await loadBusy(); refresh(); fail(data.error||"Someone just booked that time. Please pick another."); go("#timeStep"); }
+      else fail(data.error||"We couldn’t complete your booking. Please try again.");
+      return;
+    }
+    ref=data.ref;
+  }catch{ restore(); fail("Can’t reach the server. Check your connection and try again."); return; }
   $("#dRef").textContent=ref; $("#dSvc").textContent=s.name;
   $("#dWhen").textContent=`${fmt(state.day,{weekday:"short",month:"short",day:"numeric"})}, ${tm(start)}`;
   $("#dName").textContent=name;
@@ -323,10 +325,10 @@ $("#form").addEventListener("submit",async e=>{
 $("#again").addEventListener("click",()=>{
   Object.assign(state,{svc:null,day:null,time:null,busy:false}); $("#form").reset();
   $("#doneView").hidden=true; $("#bookView").hidden=false; $("#mbar").hidden=false;
-  renderServices(); renderDays(); renderSlots(); sync(); scrollTo({top:0});
+  renderServices(); renderDays(); renderSlots(); sync(); scrollTo({top:0}); loadBusy().then(refresh);
 });
 
-renderServices(); renderDays(); renderSlots(); sync();
+renderServices(); renderDays(); renderSlots(); sync(); loadBusy().then(refresh);
 </script>
 </body>
 </html>

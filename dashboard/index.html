@@ -246,14 +246,12 @@ dl.kv dd{margin:0;font-weight:500}
     <span class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-1.5-1.3-3.3-2-5-1.5C4.6 4.6 4 7 4.4 9.3c.4 2.2 1.2 3.9 1.6 6.2.4 2.4.7 4.5 2 4.5 1.6 0 1.5-4.5 4-4.5s2.4 4.5 4 4.5c1.3 0 1.6-2.1 2-4.5.4-2.3 1.2-4 1.6-6.2C20 7 19.4 4.6 17 4c-1.7-.5-3.5.2-5 1.5z"/></svg></span>
     <h1>Dentspace</h1>
     <p>Sign in to manage today’s appointments and patient records.</p>
-    <div class="seg" role="group" aria-label="Sign in as">
-      <button type="button" data-role="owner" aria-pressed="true">Owner</button>
-      <button type="button" data-role="dentist" aria-pressed="false">Dentist</button>
-      <button type="button" data-role="reception" aria-pressed="false">Reception</button>
-    </div>
-    <p class="role-note" id="roleNote"></p>
-    <button class="btn primary" style="width:100%;margin-top:10px" id="signIn">Sign in</button>
-    <p class="demo-note">Preview build with sample patients. Nothing here is real data, and changes stay in this browser only.</p>
+    <form id="loginForm" style="margin-top:26px;display:grid;gap:14px" novalidate>
+      <div class="field"><label for="user">Username</label><input class="input" id="user" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+      <div class="field"><label for="pass">Password</label><input class="input" id="pass" type="password" autocomplete="current-password" required></div>
+      <p class="err" id="loginErr" role="alert"></p>
+      <button class="btn primary" style="width:100%" id="signIn" type="submit">Sign in</button>
+    </form>
   </div>
 </section>
 
@@ -264,7 +262,6 @@ dl.kv dd{margin:0;font-weight:500}
     <nav class="nav" id="sideNav" aria-label="Main"></nav>
     <div class="side-foot">
       <div class="who" id="who"></div>
-      <button class="btn sm" data-action="reset">Reset sample data</button>
       <button class="btn sm ghost" data-action="signout">Sign out</button>
     </div>
   </aside>
@@ -328,47 +325,61 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
 const today = () => dayKey(Date.now());
 
-/* ---------- Storage (demo only) ---------- */
-const KEY = "dentspace-owner-demo-v1";
-let db;
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch{ /* storage unavailable: keep in memory */ } }
-function load(){
-  try{ const raw=localStorage.getItem(KEY); if(raw){ const d=JSON.parse(raw); if(d && d.v===1) return d; } }catch{ /* fall through to seed */ }
-  return seed();
+/* ---------- Server API ---------- */
+const API = "../api/admin.php";
+async function api(action, body){
+  const opt = {credentials:"same-origin", headers:{"X-Requested-With":"dentspace"}};
+  if(body !== undefined){ opt.method="POST"; opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+  let res;
+  try{ res = await fetch(API+"?a="+action, opt); }
+  catch{ const e=new Error("Can’t reach the server. Check your connection."); e.status=0; throw e; }
+  let data = {}; try{ data = await res.json(); }catch{ /* non-JSON error page */ }
+  if(!res.ok){ const e=new Error(data.error||"Request failed"); e.status=res.status; throw e; }
+  return data;
 }
-function seed(){
-  const t = today();
-  const names = [["Maria Santos","0917 123 4567"],["Jose Reyes","0918 234 5678"],["Ana Dela Cruz","0919 345 6789"],["Paolo Garcia","0920 456 7890"],["Liza Mendoza","0921 567 8901"],["Carlo Bautista","0922 678 9012"],["Grace Villanueva","0923 789 0123"],["Mark Aquino","0927 890 1234"],["Bea Ramos","0928 901 2345"],["Rico Fernandez","0929 012 3456"]];
-  const patients = names.map(([name,mobile],i)=>({id:"p"+i,name,mobile:mobile.replace(/\s/g,""),email:"",birthDate:"",address:"",allergies:i===2?"Penicillin":"",conditions:"",consent:true,createdAt:at(addDays(t,-120+i*9),600)}));
-  const A = (pi,dk,m,sid,status,source="staff") => { const start=at(dk,m); return {id:uid(),patientId:"p"+pi,serviceId:sid,start,end:new Date(new Date(start).getTime()+svc(sid).dur*60000).toISOString(),status,source,createdAt:start}; };
-  const appts = [
-    A(0,t,540,"svc-checkup","COMPLETED"), A(1,t,585,"svc-braces-adjust","ARRIVED"), A(2,t,660,"svc-clean","CONFIRMED","booking_site"),
-    A(3,t,780,"svc-filling","CONFIRMED"), A(4,t,855,"svc-xray","SCHEDULED","booking_site"), A(5,t,900,"svc-root-canal","SCHEDULED"),
-    A(6,addDays(t,1),600,"svc-whitening","SCHEDULED","booking_site"), A(7,addDays(t,1),780,"svc-braces-adjust","CONFIRMED"),
-    A(8,addDays(t,2),540,"svc-extraction","SCHEDULED"), A(9,addDays(t,3),660,"svc-checkup","SCHEDULED","booking_site"),
-    A(0,addDays(t,-1),600,"svc-clean","COMPLETED"), A(2,addDays(t,-1),720,"svc-filling","COMPLETED"),
-    A(4,addDays(t,-2),840,"svc-checkup","NO_SHOW"), A(6,addDays(t,-3),600,"svc-crown","COMPLETED"),
-    A(1,addDays(t,-30),585,"svc-braces-adjust","COMPLETED"), A(7,addDays(t,-31),780,"svc-braces-install","COMPLETED"),
-    A(3,addDays(t,-6),900,"svc-extraction","COMPLETED"), A(5,addDays(t,-8),660,"svc-checkup","CANCELLED")
-  ];
-  const accounts = [
-    {id:"a1",patientId:"p1",name:"Braces (upper and lower)",agreed:4500000,start:addDays(t,-150),status:"ACTIVE"},
-    {id:"a2",patientId:"p7",name:"Braces (upper)",agreed:3000000,start:addDays(t,-31),status:"ACTIVE"},
-    {id:"a3",patientId:"p6",name:"Crown, tooth 36",agreed:1200000,start:addDays(t,-3),status:"PAID"}
-  ];
-  let seq = 0; const R = () => "DS-"+t.slice(0,4)+"-"+String(++seq).padStart(5,"0");
-  const P = (acc,amt,dOff,method="CASH") => ({id:uid(),accountId:acc.id,patientId:acc.patientId,amount:amt,method,ref:"",paidAt:at(addDays(t,dOff),630),receipt:R(),voided:false,voidReason:"",by:"Front desk"});
-  const payments = [
-    P(accounts[0],1000000,-150), P(accounts[0],300000,-120,"GCASH"), P(accounts[0],300000,-90), P(accounts[0],300000,-60,"GCASH"), P(accounts[0],300000,-30),
-    P(accounts[1],800000,-31), P(accounts[2],1200000,-3,"CARD")
-  ];
-  const clinical = [
-    {id:uid(),patientId:"p1",date:addDays(t,-30),teeth:"",diagnosis:"Class II malocclusion",procedure:"Wire change, upper arch",notes:"Tolerating well. Next adjustment in 4 weeks.",by:"Dentspace Dentist"},
-    {id:uid(),patientId:"p2",date:addDays(t,-1),teeth:"46",diagnosis:"Occlusal caries",procedure:"Composite filling",notes:"Allergic to penicillin. No anesthesia complications.",by:"Dentspace Dentist"},
-    {id:uid(),patientId:"p6",date:addDays(t,-3),teeth:"36",diagnosis:"Fractured cusp",procedure:"Crown preparation",notes:"Temporary crown placed.",by:"Dentspace Dentist"}
-  ];
-  return {v:1,patients,appts,accounts,payments,clinical,seq,audit:[]};
+const COLL = ["patients","appts","accounts","payments","clinical"];
+let db = null, snap = new Map(), chain = Promise.resolve(), pollTimer = null;
+function takeSnap(){ snap=new Map(); for(const k of COLL) for(const r of db[k]) snap.set(k+":"+r.id, JSON.stringify(r)); }
+/* save() is called after every change; it sends only the records that differ from what the server last gave us. */
+function save(){ chain = chain.then(doSave); }
+async function doSave(){
+  if(!db) return;
+  const changes = {}, marks = [];
+  for(const k of COLL){
+    const ch = db[k].filter(r=>snap.get(k+":"+r.id) !== JSON.stringify(r));
+    if(ch.length){ changes[k]=ch; ch.forEach(r=>marks.push([k+":"+r.id, JSON.stringify(r)])); }
+  }
+  if(!marks.length) return;
+  try{
+    const res = await api("save", changes);
+    marks.forEach(([key,js])=>snap.set(key,js));
+    let touched = false;
+    for(const [id,receipt] of Object.entries((res.fixes||{}).payments||{})){
+      const p = db.payments.find(x=>x.id===id);
+      if(p){ p.receipt=receipt; snap.set("payments:"+id, JSON.stringify(p)); touched=true; }
+    }
+    if(touched) render();
+  }catch(err){
+    if(err.status===401){ showLogin("Your session ended. Please sign in again."); return; }
+    toast(err.message||"Couldn’t save that change.");
+    try{ await reload(); closeSheet(); render(); }catch{ /* offline: keep what is on screen */ }
+  }
 }
+async function reload(){ const s=await api("state"); db=s.db; db.seq=s.seq; takeSnap(); }
+function startPoll(){
+  stopPoll();
+  pollTimer = setInterval(async ()=>{
+    if(document.hidden || !db || sheet.open) return;
+    const a=document.activeElement; if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    await chain;
+    try{
+      const s = await api("state");
+      if(sheet.open || COLL.every(k=>JSON.stringify(s.db[k])===JSON.stringify(db[k]))) return;
+      db=s.db; db.seq=s.seq; takeSnap(); render();
+    }catch(err){ if(err.status===401) showLogin("Your session ended. Please sign in again."); }
+  }, 15000);
+}
+function stopPoll(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
 
 /* ---------- App state ---------- */
 let role = "owner", view = "today", selDay = today();
@@ -376,7 +387,7 @@ const $ = s => document.querySelector(s);
 const sheet = $("#sheet"), sheetBody = $("#sheetBody");
 const R = () => ROLES[role];
 function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove("show"),2600); }
-function log(action,detail){ db.audit.push({at:new Date().toISOString(),by:R().person,role,action,detail}); }
+function log(){ /* the server records the audit trail */ }
 const patient = id => db.patients.find(p=>p.id===id);
 function balanceOf(pid){
   const agreed = db.accounts.filter(a=>a.patientId===pid && a.status!=="CANCELLED").reduce((s,a)=>s+a.agreed,0);
@@ -399,10 +410,21 @@ const IC = {
 const VIEWNAME = {today:"Schedule",patients:"Patients",reports:"Reports"};
 
 /* ---------- Login ---------- */
-function setRole(r){ role=r; document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.role===r))); $("#roleNote").textContent=ROLES[r].note; }
-document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>setRole(b.dataset.role)));
-$("#signIn").addEventListener("click",()=>{ $("#login").hidden=true; $("#app").hidden=false; view="today"; selDay=today(); buildNav(); render(); });
-setRole("owner");
+async function enter(u){
+  role = u.role; ROLES[role].person = u.person;
+  try{ await reload(); }catch(err){ showLogin(err.message); return; }
+  $("#login").hidden=true; $("#app").hidden=false; view="today"; selDay=today(); scrollToNow.done=false;
+  buildNav(); render(); startPoll();
+}
+function showLogin(msg){ stopPoll(); db=null; closeSheet(); $("#app").hidden=true; $("#login").hidden=false; $("#loginErr").textContent=msg||""; $("#pass").value=""; }
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault(); const btn=$("#signIn"); btn.disabled=true; $("#loginErr").textContent="";
+  try{ await enter(await api("login",{username:$("#user").value,password:$("#pass").value})); }
+  catch(err){ $("#loginErr").textContent=err.message; }
+  btn.disabled=false;
+});
+async function signOut(){ try{ await api("logout",{}); }catch{ /* already signed out */ } showLogin(); }
+async function boot(){ try{ await enter(await api("me")); }catch{ showLogin(); } }
 
 function buildNav(){
   const items = R().views.map(v=>`<button data-view="${v}">${IC[v]}<span>${VIEWNAME[v]}</span></button>`).join("");
@@ -533,6 +555,7 @@ function apptSheet(id){
       <dt>Status</dt><dd><span class="chip st-${a.status}">${LABEL[a.status]}</span></dd>
       <dt>Mobile</dt><dd>${p?.mobile?`<a href="tel:${esc(p.mobile)}" style="color:var(--accent)">${esc(fmtMobile(p.mobile))}</a>`:"—"}</dd>
       <dt>Booked via</dt><dd>${a.source==="booking_site"?"Online booking":"Front desk"}</dd>
+      ${a.ref?`<dt>Reference</dt><dd>${esc(a.ref)}</dd>`:""}
     </dl>
     <div class="sheet-foot" style="justify-content:flex-start">
       ${nx.filter(s=>!["CANCELLED","NO_SHOW"].includes(s)).map(s=>`<button class="btn primary" data-status="${s}" data-id="${a.id}">${VERB[s]}</button>`).join("")}
@@ -722,7 +745,7 @@ function voidPayment(id){
 }
 function accountSheet(){
   openSheet(head("Account",`${esc(R().person)}, ${R().name}`)+`<div class="sheet-body"><p style="color:var(--muted);font-size:14px">${R().note}</p>
-  <div class="sheet-foot" style="justify-content:flex-start"><button class="btn" data-action="reset">Reset sample data</button><button class="btn" data-action="signout">Sign out</button></div></div>`);
+  <div class="sheet-foot" style="justify-content:flex-start"><button class="btn" data-action="signout">Sign out</button></div></div>`);
 }
 
 /* ---------- Events ---------- */
@@ -744,13 +767,12 @@ document.addEventListener("click",e=>{
     case "book-for": newApptSheet({patientId:d.pid}); break;
     case "print": window.print(); break;
     case "menu": accountSheet(); break;
-    case "reset": if(confirm("Reset all sample data to the starting state?")){ db=seed(); save(); closeSheet(); render(); toast("Sample data reset"); } break;
-    case "signout": closeSheet(); $("#app").hidden=true; $("#login").hidden=false; scrollToNow.done=false; break;
+    case "signout": signOut(); break;
   }
 });
 document.addEventListener("input",e=>{ if(e.target.id==="q"){ q=e.target.value; const pos=e.target.selectionStart; $("#view").innerHTML=renderPatients(); const i=$("#q"); i.focus(); i.setSelectionRange(pos,pos); } });
 
-db = load(); save();
+boot();
 </script>
 </body>
 </html>
