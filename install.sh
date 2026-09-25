@@ -55,7 +55,7 @@ server {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:$PHPSOCK;
     }
-    location ^~ /api/ { return 404; }
+    location ~ ^/api/ { return 404; }
 }
 EOF
 ln -sf /etc/nginx/sites-available/dentspace /etc/nginx/sites-enabled/dentspace
