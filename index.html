@@ -137,7 +137,7 @@ h1,h2,h3,p{margin:0}
     <div>
       <section class="intro">
         <h1>Book your dental visit.</h1>
-        <p>Choose a service and an open time. We’ll text you to confirm, and you can reschedule by replying to that message.</p>
+        <p>Choose a service and an open time. Your booking is saved right away. Keep your reference number and show it when you arrive.</p>
         <div class="hours" aria-label="Clinic hours">
           <div><b>Mon to Sat</b><span>9:00 AM to 5:00 PM</span></div>
           <div><b>Sunday</b><span>9:00 AM to 12:00 NN</span></div>
@@ -164,7 +164,7 @@ h1,h2,h3,p{margin:0}
           <div class="step-h"><span class="n">4</span><h2 id="h4s">Your details</h2></div>
           <div class="fields">
             <div class="field"><label for="name">Full name</label><input class="input" id="name" autocomplete="name" maxlength="80" required></div>
-            <div class="field"><label for="mobile">Mobile number</label><input class="input" id="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="0917 123 4567" maxlength="16" required><small>We’ll send your confirmation here.</small></div>
+            <div class="field"><label for="mobile">Mobile number</label><input class="input" id="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="0917 123 4567" maxlength="16" required><small>The clinic may call you about this appointment.</small></div>
             <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
             <label class="check"><input type="checkbox" id="consent"> I agree that Dentspace may use my name and mobile number to manage this appointment, in line with the Data Privacy Act of 2012.</label>
             <p class="err" id="err" role="alert"></p>
@@ -197,7 +197,7 @@ h1,h2,h3,p{margin:0}
     <div class="sum-row"><span>Name</span><b id="dName"></b></div>
   </div>
   <button class="btn primary" id="again">Book another visit</button>
-  <p class="fine" style="text-align:center">Please arrive 10 minutes early. To cancel, reply to the confirmation text.</p>
+  <p class="fine" style="text-align:center">Please arrive 10 minutes early. To change or cancel, contact the clinic and give your reference number.</p>
 </main>
 
 <script>
@@ -318,7 +318,7 @@ $("#form").addEventListener("submit",async e=>{
   $("#dRef").textContent=ref; $("#dSvc").textContent=s.name;
   $("#dWhen").textContent=`${fmt(state.day,{weekday:"short",month:"short",day:"numeric"})}, ${tm(start)}`;
   $("#dName").textContent=name;
-  $("#doneText").textContent=`We’ll text ${mob.slice(0,4)} ••• ${mob.slice(7)} to confirm. Keep your reference number in case you need to call.`;
+  $("#doneText").textContent=`Your appointment is saved. Keep your reference number. The clinic may call ${mob.slice(0,4)} ••• ${mob.slice(7)} if anything changes.`;
   restore();
   $("#bookView").hidden=true; $("#mbar").hidden=true; $("#doneView").hidden=false; scrollTo({top:0}); $("#doneTitle").focus();
 });
