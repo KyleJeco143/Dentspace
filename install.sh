@@ -15,21 +15,28 @@ apt-get install -y php-fpm php-mysql php-mbstring mariadb-server
 systemctl enable --now mariadb
 PHPSOCK="$(ls /run/php/php*-fpm.sock | head -1)"
 
+KEEP=0; [ -f "$WEB/api/config.php" ] && KEEP=1
 echo "== Database"
 DBPASS="$(openssl rand -hex 16)"
 SETUPKEY="$(openssl rand -hex 24)"
+if [ $KEEP = 0 ]; then
 mysql -e "CREATE DATABASE IF NOT EXISTS dentspace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS 'dentspace'@'localhost' IDENTIFIED BY '$DBPASS';
 ALTER USER 'dentspace'@'localhost' IDENTIFIED BY '$DBPASS';
 GRANT ALL PRIVILEGES ON dentspace.* TO 'dentspace'@'localhost'; FLUSH PRIVILEGES;"
+fi
 
 echo "== Files"
 mkdir -p "$WEB"
-cp -r "$SRC/index.html" "$SRC/dashboard" "$SRC/api" "$WEB/"
+cp -r "$SRC/index.html" "$SRC/dashboard" "$WEB/"
+mkdir -p "$WEB/api"; cp "$SRC"/api/*.php "$WEB/api/"; rm -f "$WEB/api/config.sample.php"
+[ $KEEP = 1 ] && rm -f "$WEB/api/setup.php"
+if [ $KEEP = 0 ]; then
 cat > "$WEB/api/config.php" <<EOF
 <?php
 return ['db_host'=>'localhost','db_name'=>'dentspace','db_user'=>'dentspace','db_pass'=>'$DBPASS','setup_key'=>'$SETUPKEY'];
 EOF
+fi
 chown -R www-data:www-data "$WEB/api"
 chmod 640 "$WEB/api/config.php"
 
@@ -65,6 +72,12 @@ systemctl reload nginx
 systemctl restart "$(basename "$PHPSOCK" .sock)" 2>/dev/null || systemctl restart php*-fpm
 
 IP="$(curl -s -m 5 https://api.ipify.org || echo 201.18.209.79)"
+if [ $KEEP = 1 ]; then
+  echo
+  echo "Updated. Existing logins, data and settings were kept."
+  echo "Booking page:  http://$IP/    Staff login:  http://$IP/dashboard/"
+  exit 0
+fi
 echo
 echo "=========================================================="
 echo "Step 1 (once): open this link and create the 3 staff logins:"

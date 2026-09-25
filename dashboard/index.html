@@ -562,8 +562,19 @@ function apptSheet(id){
       <button class="btn" data-patient="${a.patientId}">Open patient</button>
       ${nx.filter(s=>["CANCELLED","NO_SHOW"].includes(s)).map(s=>`<button class="btn ghost danger" data-status="${s}" data-id="${a.id}">${VERB[s]}</button>`).join("")}
     </div>
+    ${p?.mobile&&ACTIVE.includes(a.status)?patientMessage(a,p):""}
     ${!nx.length?`<p class="restricted">This appointment is closed. Book a new one to schedule a follow-up.</p>`:""}
   </div>`);
+}
+function patientMessage(a,p){
+  const first=(p.name||"").split(" ")[0], when=`${longDay(dayKey(a.start))} at ${tm(a.start)}`;
+  const msg=`Hi ${first}, this is Dentspace confirming your ${svc(a.serviceId).name} appointment on ${when}.${a.ref?` Ref ${a.ref}.`:""} Please arrive 10 minutes early. Reply or call us if you need to change it.`;
+  return `<div class="acct"><b style="display:block;margin-bottom:8px;font-size:14px">Message to patient</b>
+    <textarea class="input" readonly rows="4" onclick="this.select()" aria-label="Message to patient">${esc(msg)}</textarea>
+    <div class="sheet-foot" style="justify-content:flex-start;margin-top:8px">
+      <a class="btn sm primary" href="sms:${esc(p.mobile)}?&body=${encodeURIComponent(msg)}">Open in Messages</a>
+      ${p.email?`<a class="btn sm" href="mailto:${esc(p.email)}?subject=${encodeURIComponent("Your Dentspace appointment")}&body=${encodeURIComponent(msg)}">Email</a>`:""}
+    </div><small style="color:var(--muted)">On a phone, “Open in Messages” fills the text for you. On a computer, tap the box and copy it.</small></div>`;
 }
 function setStatus(id,status){
   const a=db.appts.find(x=>x.id===id); if(!a||!NEXT[a.status].includes(status)){ toast("That change isn’t allowed from the current status."); return; }

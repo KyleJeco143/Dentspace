@@ -165,6 +165,7 @@ h1,h2,h3,p{margin:0}
           <div class="fields">
             <div class="field"><label for="name">Full name</label><input class="input" id="name" autocomplete="name" maxlength="80" required></div>
             <div class="field"><label for="mobile">Mobile number</label><input class="input" id="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="0917 123 4567" maxlength="16" required><small>The clinic may call you about this appointment.</small></div>
+            <div class="field"><label for="email">Email <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input class="input" id="email" type="email" inputmode="email" autocomplete="email" maxlength="120"><small>Add it if you want a confirmation email.</small></div>
             <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
             <label class="check"><input type="checkbox" id="consent"> I agree that Dentspace may use my name and mobile number to manage this appointment, in line with the Data Privacy Act of 2012.</label>
             <p class="err" id="err" role="alert"></p>
@@ -287,7 +288,7 @@ document.addEventListener("click",e=>{
 
 function normMobile(v){ let s=String(v).replace(/[\s\-()]/g,""); if(s.startsWith("+63")) s="0"+s.slice(3); else if(s.startsWith("63")&&s.length===12) s="0"+s.slice(2); return /^09\d{9}$/.test(s)?s:""; }
 function fail(msg,el){ $("#err").textContent=msg; if(el){ el.setAttribute("aria-invalid","true"); el.focus(); } }
-["name","mobile"].forEach(id=>$("#"+id).addEventListener("input",e=>{ e.target.removeAttribute("aria-invalid"); $("#err").textContent=""; }));
+["name","mobile","email"].forEach(id=>$("#"+id).addEventListener("input",e=>{ e.target.removeAttribute("aria-invalid"); $("#err").textContent=""; }));
 $("#consent").addEventListener("change",e=>{ e.target.removeAttribute("aria-invalid"); $("#err").textContent=""; });
 
 $("#form").addEventListener("submit",async e=>{
@@ -297,15 +298,16 @@ $("#form").addEventListener("submit",async e=>{
   const name=$("#name").value.trim().replace(/\s+/g," "), mob=normMobile($("#mobile").value);
   if(name.length<2||!/[a-zA-ZÀ-ÿñÑ]/.test(name)){ fail("Enter your full name.",$("#name")); return; }
   if(!mob){ fail("Enter an 11-digit mobile number starting with 09, for example 0917 123 4567.",$("#mobile")); return; }
+  const em=$("#email").value.trim(); if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ fail("Enter a valid email or leave it blank.",$("#email")); return; }
   if(!$("#consent").checked){ fail("Tick the consent box so we can contact you about this appointment.",$("#consent")); return; }
   if($("#website").value) return; // bot trap
   const btns=[$("#submit"),$("#mSubmit")], labels=btns.map(b=>b.textContent);
   const restore=()=>{ state.busy=false; btns.forEach((b,i)=>b.textContent=labels[i]); sync(); };
   state.busy=true; sync(); btns.forEach(b=>b.innerHTML='<span class="spin" aria-hidden="true"></span>Booking');
   const start=at(state.day,state.time);
-  let ref;
+  let ref, emailed=false;
   try{
-    const res=await fetch("api/book.php",{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"dentspace"},body:JSON.stringify({serviceId:s.id,start,name,mobile:mob,consent:true,website:$("#website").value})});
+    const res=await fetch("api/book.php",{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"dentspace"},body:JSON.stringify({serviceId:s.id,start,name,mobile:mob,email:$("#email").value.trim(),consent:true,website:$("#website").value})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok){
       restore();
@@ -313,12 +315,12 @@ $("#form").addEventListener("submit",async e=>{
       else fail(data.error||"We couldn’t complete your booking. Please try again.");
       return;
     }
-    ref=data.ref;
+    ref=data.ref; emailed=!!data.emailed;
   }catch{ restore(); fail("Can’t reach the server. Check your connection and try again."); return; }
   $("#dRef").textContent=ref; $("#dSvc").textContent=s.name;
   $("#dWhen").textContent=`${fmt(state.day,{weekday:"short",month:"short",day:"numeric"})}, ${tm(start)}`;
   $("#dName").textContent=name;
-  $("#doneText").textContent=`Your appointment is saved. Keep your reference number. The clinic may call ${mob.slice(0,4)} ••• ${mob.slice(7)} if anything changes.`;
+  $("#doneText").textContent=`Your appointment is saved. Keep your reference number. The clinic may call ${mob.slice(0,4)} ••• ${mob.slice(7)} if anything changes.${emailed?" A confirmation email is on its way.":""}`;
   restore();
   $("#bookView").hidden=true; $("#mbar").hidden=true; $("#doneView").hidden=false; scrollTo({top:0}); $("#doneTitle").focus();
 });

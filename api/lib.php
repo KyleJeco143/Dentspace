@@ -8,6 +8,13 @@ const SERVICES = [
     'svc-veneers' => 120, 'svc-extraction' => 45, 'svc-root-canal' => 120, 'svc-crown' => 120, 'svc-denture' => 45,
     'svc-whitening' => 120, 'svc-braces-adjust' => 45, 'svc-braces-install' => 120, 'svc-xray' => 15, 'svc-emergency' => 60,
 ];
+const SERVICE_NAMES = [
+    'svc-checkup' => 'Check-up', 'svc-clean' => 'Cleaning', 'svc-fluoride' => 'Fluoride', 'svc-sealant' => 'Sealant',
+    'svc-filling' => 'Filling (Pasta)', 'svc-veneers' => 'Veneers', 'svc-extraction' => 'Extraction (Bunot)',
+    'svc-root-canal' => 'Root canal', 'svc-crown' => 'Crown', 'svc-denture' => 'Denture', 'svc-whitening' => 'Whitening',
+    'svc-braces-adjust' => 'Braces adjustment', 'svc-braces-install' => 'Braces installation', 'svc-xray' => 'X-ray',
+    'svc-emergency' => 'Emergency',
+];
 const ACTIVE = ['SCHEDULED', 'CONFIRMED', 'ARRIVED'];
 const NEXT = [
     'SCHEDULED' => ['CONFIRMED', 'CANCELLED', 'NO_SHOW'], 'CONFIRMED' => ['ARRIVED', 'CANCELLED', 'NO_SHOW'],
@@ -175,4 +182,66 @@ function migrate(): void {
         "CREATE TABLE IF NOT EXISTS throttle (id INT AUTO_INCREMENT PRIMARY KEY, k VARCHAR(80) NOT NULL, at DATETIME NOT NULL, INDEX (k, at)) $t",
     ];
     foreach ($sql as $s) pdo()->exec($s);
+}
+
+/* ---- email (Gmail SMTP over SSL, port 465) ----
+ * Needs smtp_user + smtp_pass in config.php (an app password). Returns false instead of throwing:
+ * a mail problem must never break a booking. */
+function send_mail(string $to, string $subject, string $body, string $replyTo = ''): bool {
+    try {
+        $c = cfg();
+        if (empty($c['smtp_user']) || empty($c['smtp_pass'])) return false;
+        $line = fn($s) => trim(preg_replace('/[\r\n]+/', ' ', (string)$s));
+        $to = $line($to);
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+        $host = $c['smtp_host'] ?? 'smtp.gmail.com';
+        $fp = @stream_socket_client('ssl://' . $host . ':' . (int)($c['smtp_port'] ?? 465), $en, $es, 10);
+        if (!$fp) return false;
+        stream_set_timeout($fp, 10);
+        $read = function () use ($fp) {
+            $r = '';
+            while (($l = fgets($fp, 515)) !== false) { $r .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; }
+            return $r;
+        };
+        $cmd = function (string $s, string $ok) use ($fp, $read) { fwrite($fp, $s . "\r\n"); return str_starts_with($read(), $ok); };
+        $user = $line($c['smtp_user']);
+        $fromName = $line($c['from_name'] ?? 'Dentspace');
+        if (!str_starts_with($read(), '220')) return false;
+        if (!$cmd('EHLO dentspace', '250')) return false;
+        if (!$cmd('AUTH LOGIN', '334') || !$cmd(base64_encode($user), '334') || !$cmd(base64_encode((string)$c['smtp_pass']), '235')) return false;
+        if (!$cmd("MAIL FROM:<$user>", '250') || !$cmd("RCPT TO:<$to>", '250') || !$cmd('DATA', '354')) return false;
+        $h = ['From: =?UTF-8?B?' . base64_encode($fromName) . "?= <$user>", "To: <$to>",
+              'Subject: =?UTF-8?B?' . base64_encode($line($subject)) . '?=', 'Date: ' . date('r'),
+              'Message-ID: <' . bin2hex(random_bytes(8)) . '@dentspace>', 'MIME-Version: 1.0',
+              'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64'];
+        if ($replyTo !== '' && filter_var($line($replyTo), FILTER_VALIDATE_EMAIL)) $h[] = 'Reply-To: <' . $line($replyTo) . '>';
+        $ok = $cmd(implode("\r\n", $h) . "\r\n\r\n" . chunk_split(base64_encode($body)) . "\r\n.", '250');
+        $cmd('QUIT', '221');
+        fclose($fp);
+        return $ok;
+    } catch (Throwable $e) {
+        error_log('Dentspace mail: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/* ---- Google Sheet log (Apps Script web app) ----
+ * Sends one booking to the clinic's Google Sheet. Silent no-op unless sheet_url + sheet_secret are in config.php. */
+function push_sheet(array $row): bool {
+    try {
+        $c = cfg();
+        if (empty($c['sheet_url']) || empty($c['sheet_secret'])) return false;
+        if (!str_starts_with((string)$c['sheet_url'], 'https://script.google.com/')) return false;
+        $ctx = stream_context_create(['http' => [
+            'method' => 'POST', 'timeout' => 15, 'ignore_errors' => true, 'follow_location' => 0,
+            'header' => "Content-Type: application/json\r\n",
+            'content' => json_encode($row + ['secret' => $c['sheet_secret']], JSON_UNESCAPED_UNICODE),
+        ]]);
+        // Apps Script runs doPost on this request; the redirect it answers with only carries the reply.
+        $res = @file_get_contents($c['sheet_url'], false, $ctx);
+        return $res !== false;
+    } catch (Throwable $e) {
+        error_log('Dentspace sheet: ' . $e->getMessage());
+        return false;
+    }
 }
