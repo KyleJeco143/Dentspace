@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en-PH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dentspace Clinic</title>
+<meta name="theme-color" content="#0B6E65">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dentspace">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F7F6;--surface:#FFFFFF;--ink:#132120;--muted:#5D6B69;--faint:#8C9896;--line:#E1E6E4;
+  --accent:#0B6E65;--accent-ink:#FFFFFF;--accent-soft:#E2F0ED;--blue:#2F5BC4;--green:#2C7A4B;--amber:#94600A;--danger:#B42318;
+  --r-sm:8px;--r:12px;--r-lg:18px;
+  --font:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1615;--surface:#15201F;--ink:#E6EEEC;--muted:#98A8A5;--faint:#6F7F7C;--line:#243331;
+  --accent:#4DBFB1;--accent-ink:#06201D;--accent-soft:#12302C;--blue:#86A6F0;--green:#6FCB94;--amber:#E0AE55;--danger:#F2877C;}}
+:root[data-theme="dark"]{--bg:#0E1615;--surface:#15201F;--ink:#E6EEEC;--muted:#98A8A5;--faint:#6F7F7C;--line:#243331;
+  --accent:#4DBFB1;--accent-ink:#06201D;--accent-soft:#12302C;--blue:#86A6F0;--green:#6FCB94;--amber:#E0AE55;--danger:#F2877C;}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);font-feature-settings:"tnum" 1}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* Buttons & fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px;transition:background .15s,border-color .15s}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.danger{color:var(--danger)}
+.btn.sm{min-height:34px;padding:0 12px;font-size:13px}
+.btn.icon{width:42px;padding:0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.field{display:grid;gap:6px}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{min-height:84px;resize:vertical}
+.err{color:var(--danger);font-size:13px}
+.grid2{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+
+/* Login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px}
+.login-card{width:100%;max-width:380px}
+.mark{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--accent);color:var(--accent-ink)}
+.login h1{font-size:28px;letter-spacing:-.02em;margin:22px 0 6px}
+.login p{color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin:26px 0 14px}
+.seg button{border:0;background:transparent;border-radius:9px;padding:10px 4px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+.role-note{font-size:13px;color:var(--muted);min-height:40px}
+.demo-note{margin-top:22px;font-size:12.5px;color:var(--faint)}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;padding:22px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand .mark{width:34px;height:34px;border-radius:10px}
+.brand strong{font-size:16px;letter-spacing:-.01em}
+.nav{display:grid;gap:2px}
+.nav button{display:flex;align-items:center;gap:12px;border:0;background:transparent;padding:10px 12px;border-radius:var(--r-sm);text-align:left;font-weight:500;color:var(--muted)}
+.nav button:hover{background:var(--surface);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--line)}
+.nav svg{width:18px;height:18px}
+.side-foot{margin-top:auto;padding:12px;border-top:1px solid var(--line);display:grid;gap:8px}
+.who{font-size:13px;color:var(--muted)}
+.who strong{display:block;color:var(--ink);font-size:14px}
+main{min-width:0}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 32px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top h1{font-size:22px;letter-spacing:-.02em;font-weight:700}
+.top p{color:var(--muted);font-size:13px}
+.view{padding:24px 32px 48px;max-width:1120px}
+.tabbar{display:none}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .side{display:none}
+  .top{padding:14px 18px}
+  .top h1{font-size:19px}
+  .view{padding:18px 16px 110px}
+  .tabbar{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+  .tabbar button{border:0;background:transparent;display:grid;justify-items:center;gap:2px;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--faint);border-radius:10px}
+  .tabbar button[aria-current="page"]{color:var(--accent)}
+  .tabbar svg{width:22px;height:22px}
+  .hide-m{display:none}
+}
+
+/* Schedule */
+.daybar{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.daybar .when{margin-right:auto;min-width:0}
+.daybar .btn{flex:none}
+.daybar .when strong{display:block;font-size:20px;letter-spacing:-.02em}
+.daybar .when span{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:18px}
+.week button{border:1px solid transparent;background:transparent;border-radius:var(--r);padding:8px 0;display:grid;gap:1px;justify-items:center;color:var(--muted)}
+.week button:hover{background:var(--surface)}
+.week button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.week .d{font-size:18px;font-weight:700;color:inherit}
+.week .w{font-size:11.5px}
+.week .c{height:6px;display:flex;gap:2px}
+.week .c i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.55}
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.stat b{display:block;font-size:24px;letter-spacing:-.02em}
+.stat span{font-size:13px;color:var(--muted)}
+.sched{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}
+@media (max-width:1100px){.sched{grid-template-columns:1fr}}
+.rail{position:relative;margin-left:56px}
+.hr{position:absolute;left:-56px;right:0;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+.hr span{position:absolute;top:-9px;left:0;width:48px;background:var(--bg);padding-right:6px}
+.hr.half{border-top-style:dashed;opacity:.55;left:0}
+.appt{position:absolute;left:6px;right:0;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--sc,var(--faint));padding:6px 10px;text-align:left;overflow:hidden;display:flex;gap:10px;align-items:flex-start;transition:border-color .15s,transform .15s}
+.appt:hover{border-color:var(--faint);border-left-color:var(--sc)}
+.appt .t{font-size:12.5px;color:var(--muted);white-space:nowrap;min-width:62px}
+.appt .n{font-weight:600;font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appt .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appt .body{min-width:0;flex:1}
+.appt .n,.appt .s{display:block}
+.appt.short{align-items:center;padding-top:2px;padding-bottom:2px}
+.appt.short .s{display:none}
+.appt.done{opacity:.6}
+.appt.gone{opacity:.45;background:transparent;border-style:dashed}
+.now{position:absolute;left:-6px;right:0;height:0;border-top:2px solid var(--danger);z-index:2}
+.now::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--sc,var(--faint))}
+.st-SCHEDULED{--sc:var(--faint)}.st-CONFIRMED{--sc:var(--accent)}.st-ARRIVED{--sc:var(--blue)}.st-COMPLETED{--sc:var(--green)}.st-CANCELLED{--sc:var(--line)}.st-NO_SHOW{--sc:var(--danger)}
+.panel h3{font-size:14px;font-weight:600;margin-bottom:10px}
+.queue{display:grid;gap:0;border-top:1px solid var(--line)}
+.queue button{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:12px 2px}
+.queue button:hover{background:var(--surface)}
+.queue .t{font-size:13px;color:var(--muted)}
+.queue .n{font-weight:600;font-size:14px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r-lg)}
+.empty strong{display:block;color:var(--ink);margin-bottom:4px}
+
+/* Patients */
+.search{position:relative;margin-bottom:14px;max-width:420px}
+.search svg{position:absolute;left:12px;top:13px;width:18px;height:18px;color:var(--faint)}
+.search .input{padding-left:38px}
+.list{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:1fr 150px 130px 110px;gap:12px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:14px 4px}
+.row:hover{background:var(--surface)}
+.row .n{font-weight:600}
+.row .m{color:var(--muted);font-size:13px}
+.bal{font-weight:600;text-align:right}
+.bal.zero{color:var(--faint);font-weight:500}
+.list-head{display:grid;grid-template-columns:1fr 150px 130px 110px;gap:12px;padding:0 4px 8px;font-size:12.5px;color:var(--faint)}
+.list-head span:last-child{text-align:right}
+@media (max-width:700px){.row,.list-head{grid-template-columns:1fr auto}.row .c2,.row .c3,.list-head .c2,.list-head .c3{display:none}}
+
+/* Reports */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);margin-bottom:28px}
+.kpi{padding:20px;border-left:1px solid var(--line)}
+.kpi:first-child{border-left:0}
+.kpi span{font-size:13px;color:var(--muted)}
+.kpi b{display:block;font-size:26px;letter-spacing:-.02em;margin-top:4px}
+@media (max-width:760px){.kpis{grid-template-columns:1fr 1fr}.kpi:nth-child(3){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--line)}}
+.rep{display:grid;grid-template-columns:1.3fr 1fr;gap:32px}
+@media (max-width:860px){.rep{grid-template-columns:1fr}}
+.bars{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:end;height:200px;padding-top:10px;border-bottom:1px solid var(--line)}
+.bar{display:grid;align-content:end;justify-items:center;gap:6px;height:100%}
+.bar i{display:block;width:100%;max-width:44px;background:var(--accent);border-radius:6px 6px 0 0;min-height:2px}
+.bar small{font-size:11.5px;color:var(--muted)}
+.bar-labels{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;text-align:center;font-size:12.5px;color:var(--muted);padding-top:8px}
+.rank{border-top:1px solid var(--line)}
+.rank div{display:flex;justify-content:space-between;padding:11px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.rank b{font-weight:600}
+
+/* Dialog / sheet */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:var(--r-lg);width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:0 24px 60px rgba(8,30,28,.22)}
+dialog::backdrop{background:rgba(10,24,22,.42)}
+dialog[open]{animation:pop .18s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;position:sticky;top:0;background:var(--surface);z-index:1;border-bottom:1px solid var(--line)}
+.sheet-head h2{font-size:19px;letter-spacing:-.015em}
+.sheet-head p{color:var(--muted);font-size:13px;margin-top:2px}
+.sheet-body{padding:18px 22px 22px;display:grid;gap:16px}
+.sheet-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding-top:4px}
+@media (max-width:600px){
+  dialog{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:var(--r-lg) var(--r-lg) 0 0;max-height:92vh;padding-bottom:env(safe-area-inset-bottom,0px)}
+  dialog[open]{animation:up .22s ease-out}
+  @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+}
+dl.kv{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;font-weight:500}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 -22px;padding:0 22px;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:10px 10px;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.acct{border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.acct-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.acct-top b{font-size:15px}
+.prog{height:6px;background:var(--line);border-radius:6px;margin:12px 0 8px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.acct-nums{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.pay{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.pay:last-child{border-bottom:0}
+.pay small{color:var(--muted);font-size:12.5px}
+.pay .actions{grid-column:1/-1;display:flex;gap:6px}
+.void{text-decoration:line-through;color:var(--faint)}
+.entry{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.entry small{color:var(--muted)}
+.restricted{font-size:13px;color:var(--muted);background:var(--bg);border-radius:var(--r-sm);padding:10px 12px}
+
+/* Receipt */
+.receipt{font-size:14px}
+.receipt .rhead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}
+.receipt .amt{margin-top:16px;padding:16px;border-radius:var(--r);background:var(--accent-soft);text-align:center}
+.receipt .amt b{display:block;font-size:28px;letter-spacing:-.02em}
+.receipt .voided{margin-top:12px;text-align:center;font-weight:700;color:var(--danger)}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:var(--r);font-size:14px;font-weight:500;transition:.2s;z-index:50;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:900px){.toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{position:absolute;inset:0;padding:24px;background:#fff;color:#000}
+  .no-print{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Sign-in (demo) -->
+<section id="login" class="login">
+  <div class="login-card">
+    <span class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-1.5-1.3-3.3-2-5-1.5C4.6 4.6 4 7 4.4 9.3c.4 2.2 1.2 3.9 1.6 6.2.4 2.4.7 4.5 2 4.5 1.6 0 1.5-4.5 4-4.5s2.4 4.5 4 4.5c1.3 0 1.6-2.1 2-4.5.4-2.3 1.2-4 1.6-6.2C20 7 19.4 4.6 17 4c-1.7-.5-3.5.2-5 1.5z"/></svg></span>
+    <h1>Dentspace</h1>
+    <p>Sign in to manage today’s appointments and patient records.</p>
+    <div class="seg" role="group" aria-label="Sign in as">
+      <button type="button" data-role="owner" aria-pressed="true">Owner</button>
+      <button type="button" data-role="dentist" aria-pressed="false">Dentist</button>
+      <button type="button" data-role="reception" aria-pressed="false">Reception</button>
+    </div>
+    <p class="role-note" id="roleNote"></p>
+    <button class="btn primary" style="width:100%;margin-top:10px" id="signIn">Sign in</button>
+    <p class="demo-note">Preview build with sample patients. Nothing here is real data, and changes stay in this browser only.</p>
+  </div>
+</section>
+
+<!-- App -->
+<div id="app" class="shell" hidden>
+  <aside class="side">
+    <div class="brand"><span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-1.5-1.3-3.3-2-5-1.5C4.6 4.6 4 7 4.4 9.3c.4 2.2 1.2 3.9 1.6 6.2.4 2.4.7 4.5 2 4.5 1.6 0 1.5-4.5 4-4.5s2.4 4.5 4 4.5c1.3 0 1.6-2.1 2-4.5.4-2.3 1.2-4 1.6-6.2C20 7 19.4 4.6 17 4c-1.7-.5-3.5.2-5 1.5z"/></svg></span><strong>Dentspace</strong></div>
+    <nav class="nav" id="sideNav" aria-label="Main"></nav>
+    <div class="side-foot">
+      <div class="who" id="who"></div>
+      <button class="btn sm" data-action="reset">Reset sample data</button>
+      <button class="btn sm ghost" data-action="signout">Sign out</button>
+    </div>
+  </aside>
+  <main>
+    <header class="top">
+      <div><h1 id="title"></h1><p id="subtitle"></p></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn icon ghost" data-action="menu" aria-label="Account" id="acctBtn" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+        <button class="btn primary" data-action="new-appt" id="newBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="hide-m">New appointment</span><span class="sr">New appointment</span></button>
+      </div>
+    </header>
+    <section class="view" id="view" aria-live="polite"></section>
+  </main>
+  <nav class="tabbar" id="tabNav" aria-label="Main"></nav>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheetTitle"><div id="sheetBody"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ---------- Config (mirrors lib/clinic-config.ts) ---------- */
+const TZ = "Asia/Manila";
+const SERVICES = [
+  ["svc-checkup","Check-up",30],["svc-clean","Cleaning",45],["svc-fluoride","Fluoride",30],["svc-sealant","Sealant",30],
+  ["svc-filling","Filling (Pasta)",60],["svc-veneers","Veneers",120],["svc-extraction","Extraction (Bunot)",45],
+  ["svc-root-canal","Root canal",120],["svc-crown","Crown",120],["svc-denture","Denture",45],["svc-whitening","Whitening",120],
+  ["svc-braces-adjust","Braces adjustment",45],["svc-braces-install","Braces installation",120],["svc-xray","X-ray",15],
+  ["svc-emergency","Emergency",60]
+].map(([id,name,dur])=>({id,name,dur}));
+const svc = id => SERVICES.find(s=>s.id===id) || {name:"Unknown service",dur:30};
+const ACTIVE = ["SCHEDULED","CONFIRMED","ARRIVED"];
+const NEXT = {SCHEDULED:["CONFIRMED","CANCELLED","NO_SHOW"],CONFIRMED:["ARRIVED","CANCELLED","NO_SHOW"],ARRIVED:["COMPLETED"],COMPLETED:[],CANCELLED:[],NO_SHOW:[]};
+const VERB = {CONFIRMED:"Confirm",ARRIVED:"Check in",COMPLETED:"Mark completed",CANCELLED:"Cancel appointment",NO_SHOW:"Mark no-show"};
+const DONE = {CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Marked completed",CANCELLED:"Cancelled",NO_SHOW:"Marked no-show"};
+const LABEL = {SCHEDULED:"Scheduled",CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Completed",CANCELLED:"Cancelled",NO_SHOW:"No-show"};
+const ROLES = {
+  owner:{name:"Owner",person:"Dr. Sample Owner",note:"Full access: schedule, patients, clinical notes, payments, reports and voids.",views:["today","patients","reports"],clinical:true,pay:true,void:true},
+  dentist:{name:"Dentist",person:"Dentspace Dentist",note:"Schedule, patients and clinical notes. Payments are view-only; reports are hidden.",views:["today","patients"],clinical:true,pay:false,void:false},
+  reception:{name:"Reception",person:"Front desk",note:"Schedule, patient contact details and payments. Clinical notes are hidden.",views:["today","patients"],clinical:false,pay:true,void:false}
+};
+
+/* ---------- Time helpers (always Manila time) ---------- */
+const fDay = new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"});
+const fHM = new Intl.DateTimeFormat("en-US",{timeZone:TZ,hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+const fTime = new Intl.DateTimeFormat("en-PH",{timeZone:TZ,hour:"numeric",minute:"2-digit"});
+const dayKey = d => fDay.format(new Date(d));
+const minsOf = iso => { const p=fHM.formatToParts(new Date(iso)); return +p.find(x=>x.type==="hour").value*60 + +p.find(x=>x.type==="minute").value; };
+const hm = m => String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const at = (dk,m) => new Date(`${dk}T${hm(m)}:00+08:00`).toISOString();
+const noon = dk => new Date(dk+"T12:00:00+08:00");
+const addDays = (dk,n) => dayKey(noon(dk).getTime()+n*864e5);
+const weekday = dk => noon(dk).getUTCDay();
+const hoursOf = dk => ({open:540, close: weekday(dk)===0 ? 720 : 1020});
+const tm = iso => fTime.format(new Date(iso));
+const longDay = dk => new Intl.DateTimeFormat("en-PH",{timeZone:TZ,weekday:"long",month:"long",day:"numeric"}).format(noon(dk));
+const shortDate = iso => new Intl.DateTimeFormat("en-PH",{timeZone:TZ,month:"short",day:"numeric",year:"numeric"}).format(new Date(iso));
+const hourLabel = m => { const h=Math.floor(m/60); return (h%12||12)+(h<12?" AM":" PM"); };
+const peso = c => "₱"+(c/100).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const today = () => dayKey(Date.now());
+
+/* ---------- Storage (demo only) ---------- */
+const KEY = "dentspace-owner-demo-v1";
+let db;
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch{ /* storage unavailable: keep in memory */ } }
+function load(){
+  try{ const raw=localStorage.getItem(KEY); if(raw){ const d=JSON.parse(raw); if(d && d.v===1) return d; } }catch{ /* fall through to seed */ }
+  return seed();
+}
+function seed(){
+  const t = today();
+  const names = [["Maria Santos","0917 123 4567"],["Jose Reyes","0918 234 5678"],["Ana Dela Cruz","0919 345 6789"],["Paolo Garcia","0920 456 7890"],["Liza Mendoza","0921 567 8901"],["Carlo Bautista","0922 678 9012"],["Grace Villanueva","0923 789 0123"],["Mark Aquino","0927 890 1234"],["Bea Ramos","0928 901 2345"],["Rico Fernandez","0929 012 3456"]];
+  const patients = names.map(([name,mobile],i)=>({id:"p"+i,name,mobile:mobile.replace(/\s/g,""),email:"",birthDate:"",address:"",allergies:i===2?"Penicillin":"",conditions:"",consent:true,createdAt:at(addDays(t,-120+i*9),600)}));
+  const A = (pi,dk,m,sid,status,source="staff") => { const start=at(dk,m); return {id:uid(),patientId:"p"+pi,serviceId:sid,start,end:new Date(new Date(start).getTime()+svc(sid).dur*60000).toISOString(),status,source,createdAt:start}; };
+  const appts = [
+    A(0,t,540,"svc-checkup","COMPLETED"), A(1,t,585,"svc-braces-adjust","ARRIVED"), A(2,t,660,"svc-clean","CONFIRMED","booking_site"),
+    A(3,t,780,"svc-filling","CONFIRMED"), A(4,t,855,"svc-xray","SCHEDULED","booking_site"), A(5,t,900,"svc-root-canal","SCHEDULED"),
+    A(6,addDays(t,1),600,"svc-whitening","SCHEDULED","booking_site"), A(7,addDays(t,1),780,"svc-braces-adjust","CONFIRMED"),
+    A(8,addDays(t,2),540,"svc-extraction","SCHEDULED"), A(9,addDays(t,3),660,"svc-checkup","SCHEDULED","booking_site"),
+    A(0,addDays(t,-1),600,"svc-clean","COMPLETED"), A(2,addDays(t,-1),720,"svc-filling","COMPLETED"),
+    A(4,addDays(t,-2),840,"svc-checkup","NO_SHOW"), A(6,addDays(t,-3),600,"svc-crown","COMPLETED"),
+    A(1,addDays(t,-30),585,"svc-braces-adjust","COMPLETED"), A(7,addDays(t,-31),780,"svc-braces-install","COMPLETED"),
+    A(3,addDays(t,-6),900,"svc-extraction","COMPLETED"), A(5,addDays(t,-8),660,"svc-checkup","CANCELLED")
+  ];
+  const accounts = [
+    {id:"a1",patientId:"p1",name:"Braces (upper and lower)",agreed:4500000,start:addDays(t,-150),status:"ACTIVE"},
+    {id:"a2",patientId:"p7",name:"Braces (upper)",agreed:3000000,start:addDays(t,-31),status:"ACTIVE"},
+    {id:"a3",patientId:"p6",name:"Crown, tooth 36",agreed:1200000,start:addDays(t,-3),status:"PAID"}
+  ];
+  let seq = 0; const R = () => "DS-"+t.slice(0,4)+"-"+String(++seq).padStart(5,"0");
+  const P = (acc,amt,dOff,method="CASH") => ({id:uid(),accountId:acc.id,patientId:acc.patientId,amount:amt,method,ref:"",paidAt:at(addDays(t,dOff),630),receipt:R(),voided:false,voidReason:"",by:"Front desk"});
+  const payments = [
+    P(accounts[0],1000000,-150), P(accounts[0],300000,-120,"GCASH"), P(accounts[0],300000,-90), P(accounts[0],300000,-60,"GCASH"), P(accounts[0],300000,-30),
+    P(accounts[1],800000,-31), P(accounts[2],1200000,-3,"CARD")
+  ];
+  const clinical = [
+    {id:uid(),patientId:"p1",date:addDays(t,-30),teeth:"",diagnosis:"Class II malocclusion",procedure:"Wire change, upper arch",notes:"Tolerating well. Next adjustment in 4 weeks.",by:"Dentspace Dentist"},
+    {id:uid(),patientId:"p2",date:addDays(t,-1),teeth:"46",diagnosis:"Occlusal caries",procedure:"Composite filling",notes:"Allergic to penicillin. No anesthesia complications.",by:"Dentspace Dentist"},
+    {id:uid(),patientId:"p6",date:addDays(t,-3),teeth:"36",diagnosis:"Fractured cusp",procedure:"Crown preparation",notes:"Temporary crown placed.",by:"Dentspace Dentist"}
+  ];
+  return {v:1,patients,appts,accounts,payments,clinical,seq,audit:[]};
+}
+
+/* ---------- App state ---------- */
+let role = "owner", view = "today", selDay = today();
+const $ = s => document.querySelector(s);
+const sheet = $("#sheet"), sheetBody = $("#sheetBody");
+const R = () => ROLES[role];
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove("show"),2600); }
+function log(action,detail){ db.audit.push({at:new Date().toISOString(),by:R().person,role,action,detail}); }
+const patient = id => db.patients.find(p=>p.id===id);
+function balanceOf(pid){
+  const agreed = db.accounts.filter(a=>a.patientId===pid && a.status!=="CANCELLED").reduce((s,a)=>s+a.agreed,0);
+  const paid = db.payments.filter(p=>p.patientId===pid && !p.voided).reduce((s,p)=>s+p.amount,0);
+  return agreed - paid;
+}
+const paidOn = aid => db.payments.filter(p=>p.accountId===aid && !p.voided).reduce((s,p)=>s+p.amount,0);
+
+/* ---------- Icons ---------- */
+const IC = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>',
+  patients:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.5 3.5 5.2"/></svg>',
+  reports:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  account:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  close:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  left:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  right:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>'
+};
+const VIEWNAME = {today:"Schedule",patients:"Patients",reports:"Reports"};
+
+/* ---------- Login ---------- */
+function setRole(r){ role=r; document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.role===r))); $("#roleNote").textContent=ROLES[r].note; }
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>setRole(b.dataset.role)));
+$("#signIn").addEventListener("click",()=>{ $("#login").hidden=true; $("#app").hidden=false; view="today"; selDay=today(); buildNav(); render(); });
+setRole("owner");
+
+function buildNav(){
+  const items = R().views.map(v=>`<button data-view="${v}">${IC[v]}<span>${VIEWNAME[v]}</span></button>`).join("");
+  $("#sideNav").innerHTML = items;
+  $("#tabNav").innerHTML = items + `<button data-action="menu">${IC.account}<span>Account</span></button>`;
+  $("#who").innerHTML = `<strong>${esc(R().person)}</strong>${esc(R().name)}`;
+}
+
+/* ---------- Render ---------- */
+function render(){
+  if(!R().views.includes(view)) view="today";
+  document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-current", b.dataset.view===view?"page":"false"));
+  const v = $("#view");
+  if(view==="today"){ $("#title").textContent="Schedule"; $("#subtitle").textContent="Dentspace, 1 dentist"; v.innerHTML=renderToday(); requestAnimationFrame(scrollToNow); }
+  if(view==="patients"){ $("#title").textContent="Patients"; $("#subtitle").textContent=db.patients.length+" on record"; v.innerHTML=renderPatients(); }
+  if(view==="reports"){ $("#title").textContent="Reports"; $("#subtitle").textContent="Collections and visits"; v.innerHTML=renderReports(); }
+}
+
+const HOUR = 96; // px per hour on the day rail
+function renderToday(){
+  const {open,close} = hoursOf(selDay);
+  const list = db.appts.filter(a=>dayKey(a.start)===selDay).sort((a,b)=>a.start.localeCompare(b.start));
+  const live = list.filter(a=>ACTIVE.includes(a.status)||a.status==="COMPLETED");
+  const isToday = selDay===today();
+  const week = Array.from({length:7},(_,i)=>addDays(selDay,i-3)).map(dk=>{
+    const n = db.appts.filter(a=>dayKey(a.start)===dk && a.status!=="CANCELLED").length;
+    const w = new Intl.DateTimeFormat("en-PH",{timeZone:TZ,weekday:"short"}).format(noon(dk));
+    return `<button data-day="${dk}" aria-pressed="${dk===selDay}" aria-label="${longDay(dk)}, ${n} appointments"><span class="w">${w}</span><span class="d">${+dk.slice(8)}</span><span class="c">${"<i></i>".repeat(Math.min(n,4))}</span></button>`;
+  }).join("");
+  const count = s => list.filter(a=>a.status===s).length;
+  let rail = "";
+  for(let m=open;m<=close;m+=30){
+    const top=(m-open)/60*HOUR;
+    rail += m%60===0 ? `<div class="hr" style="top:${top}px"><span>${hourLabel(m)}</span></div>` : `<div class="hr half" style="top:${top}px"></div>`;
+  }
+  rail += list.map(a=>{
+    const s=minsOf(a.start), e=minsOf(a.end), h=Math.max((e-s)/60*HOUR-3,22), p=patient(a.patientId);
+    const cls = a.status==="COMPLETED"?"done":(a.status==="CANCELLED"||a.status==="NO_SHOW")?"gone":"";
+    return `<button class="appt st-${a.status} ${cls} ${h<44?"short":""}" style="top:${(s-open)/60*HOUR+1}px;height:${h}px" data-appt="${a.id}" aria-label="${esc(tm(a.start))}, ${esc(p?.name)}, ${esc(svc(a.serviceId).name)}, ${LABEL[a.status]}"><span class="t">${tm(a.start)}</span><span class="body"><span class="n">${esc(p?.name)}</span><span class="s">${esc(svc(a.serviceId).name)}, ${LABEL[a.status]}</span></span></button>`;
+  }).join("");
+  if(isToday){ const nm=minsOf(new Date().toISOString()); if(nm>=open&&nm<=close) rail += `<div class="now" id="nowLine" style="top:${(nm-open)/60*HOUR}px" aria-hidden="true"></div>`; }
+  const upcoming = list.filter(a=>ACTIVE.includes(a.status));
+  return `
+  <div class="daybar">
+    <div class="when"><strong>${isToday?"Today":longDay(selDay).split(",")[0]}</strong><span>${longDay(selDay)}, open ${hourLabel(open)} to ${hourLabel(close)}</span></div>
+    <button class="btn icon ghost" data-shift="-1" aria-label="Previous day">${IC.left}</button>
+    <button class="btn sm" data-day="${today()}" ${isToday?"disabled":""}>Today</button>
+    <button class="btn icon ghost" data-shift="1" aria-label="Next day">${IC.right}</button>
+  </div>
+  <div class="week">${week}</div>
+  <div class="stats">
+    <div class="stat"><b>${live.length}</b><span>Booked</span></div>
+    <div class="stat"><b>${count("CONFIRMED")}</b><span>Confirmed</span></div>
+    <div class="stat"><b>${count("ARRIVED")}</b><span>Checked in</span></div>
+    <div class="stat"><b>${count("COMPLETED")}</b><span>Completed</span></div>
+  </div>
+  <div class="sched">
+    <div class="rail" style="height:${(close-open)/60*HOUR+12}px" aria-label="Day timeline">${rail}</div>
+    <div class="panel">
+      <h3>Up next</h3>
+      ${upcoming.length ? `<div class="queue">${upcoming.map(a=>`<button data-appt="${a.id}"><span class="t">${tm(a.start)}</span><span><span class="n" style="display:block">${esc(patient(a.patientId)?.name)}</span><span style="font-size:13px;color:var(--muted)">${esc(svc(a.serviceId).name)}</span></span><span class="chip st-${a.status}">${LABEL[a.status]}</span></button>`).join("")}</div>`
+      : `<div class="empty"><strong>No one waiting</strong>Open slots can be booked with New appointment.</div>`}
+    </div>
+  </div>`;
+}
+function scrollToNow(){ const n=$("#nowLine"); if(n && !scrollToNow.done){ scrollToNow.done=true; const y=n.getBoundingClientRect().top+scrollY-240; if(y>0) scrollTo({top:y}); } }
+
+let q = "";
+function renderPatients(){
+  const term=q.trim().toLowerCase().replace(/\s/g,"");
+  const rows = db.patients.filter(p=>(p.name+p.mobile).toLowerCase().replace(/\s/g,"").includes(term)).sort((a,b)=>a.name.localeCompare(b.name));
+  const lastVisit = pid => { const v=db.appts.filter(a=>a.patientId===pid&&a.status==="COMPLETED").sort((a,b)=>b.start.localeCompare(a.start))[0]; return v?shortDate(v.start):"No visits yet"; };
+  return `<div class="search">${IC.search}<label class="sr" for="q">Search patients</label><input id="q" class="input" placeholder="Search by name or mobile" value="${esc(q)}" autocomplete="off"></div>
+  ${rows.length?`<div class="list-head"><span>Name</span><span class="c2">Mobile</span><span class="c3">Last visit</span><span>Balance</span></div>
+  <div class="list">${rows.map(p=>{const b=balanceOf(p.id);return `<button class="row" data-patient="${p.id}"><span><span class="n" style="display:block">${esc(p.name)}</span></span><span class="m c2">${esc(fmtMobile(p.mobile))}</span><span class="m c3">${lastVisit(p.id)}</span><span class="bal ${b>0?"":"zero"}">${b>0?peso(b):"Paid up"}</span></button>`}).join("")}</div>`
+  :`<div class="empty"><strong>No patients match “${esc(q)}”</strong>Check the spelling or search by mobile number.</div>`}`;
+}
+const fmtMobile = m => m && m.length===11 ? `${m.slice(0,4)} ${m.slice(4,7)} ${m.slice(7)}` : (m||"—");
+
+function renderReports(){
+  const t=today(), month=t.slice(0,7);
+  const live = db.payments.filter(p=>!p.voided);
+  const collectedMonth = live.filter(p=>dayKey(p.paidAt).slice(0,7)===month).reduce((s,p)=>s+p.amount,0);
+  const outstanding = db.patients.reduce((s,p)=>s+Math.max(balanceOf(p.id),0),0);
+  const monthAppts = db.appts.filter(a=>dayKey(a.start).slice(0,7)===month && dayKey(a.start)<=t);
+  const completed = monthAppts.filter(a=>a.status==="COMPLETED").length;
+  const noShow = monthAppts.filter(a=>a.status==="NO_SHOW").length;
+  const rate = (completed+noShow) ? Math.round(noShow/(completed+noShow)*100) : 0;
+  const months = Array.from({length:6},(_,i)=>{ const d=noon(t); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()-5+i); return dayKey(d).slice(0,7); });
+  const sums = months.map(m=>live.filter(p=>dayKey(p.paidAt).slice(0,7)===m).reduce((s,p)=>s+p.amount,0));
+  const max = Math.max(...sums,1);
+  const byService = {}; db.appts.filter(a=>a.status==="COMPLETED").forEach(a=>byService[a.serviceId]=(byService[a.serviceId]||0)+1);
+  const top = Object.entries(byService).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const mlabel = m => new Intl.DateTimeFormat("en-PH",{month:"short",timeZone:TZ}).format(noon(m+"-15"));
+  const owed = db.patients.map(p=>[p,balanceOf(p.id)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  return `<div class="kpis">
+    <div class="kpi"><span>Collected this month</span><b>${peso(collectedMonth)}</b></div>
+    <div class="kpi"><span>Outstanding balances</span><b>${peso(outstanding)}</b></div>
+    <div class="kpi"><span>Visits completed</span><b>${completed}</b></div>
+    <div class="kpi"><span>No-show rate</span><b>${rate}%</b></div>
+  </div>
+  <div class="rep">
+    <section class="panel"><h3>Collections, last 6 months</h3>
+      <div class="bars" role="img" aria-label="Monthly collections">${sums.map(s=>`<div class="bar"><small>${s?"₱"+Math.round(s/100000)+"k":""}</small><i style="height:${s/max*150}px"></i></div>`).join("")}</div>
+      <div class="bar-labels">${months.map(m=>`<span>${mlabel(m)}</span>`).join("")}</div>
+    </section>
+    <section class="panel"><h3>Most completed services</h3>
+      <div class="rank">${top.length?top.map(([id,n])=>`<div><span>${esc(svc(id).name)}</span><b>${n}</b></div>`).join(""):`<div><span>No completed visits yet</span></div>`}</div>
+      <h3 style="margin-top:26px">Balances to follow up</h3>
+      <div class="rank">${owed.length?owed.map(([p,b])=>`<div><button class="btn ghost sm" style="padding:0;min-height:0" data-patient="${p.id}">${esc(p.name)}</button><b>${peso(b)}</b></div>`).join(""):`<div><span>Every account is paid up</span></div>`}</div>
+    </section>
+  </div>`;
+}
+
+/* ---------- Sheets ---------- */
+function openSheet(html){ sheetBody.innerHTML=html; if(!sheet.open) sheet.showModal(); const f=sheetBody.querySelector("[autofocus]"); if(f) f.focus(); }
+function closeSheet(){ if(sheet.open) sheet.close(); }
+const head = (title,sub="") => `<div class="sheet-head"><div><h2 id="sheetTitle">${title}</h2>${sub?`<p>${sub}</p>`:""}</div><button class="btn icon ghost" data-action="close" aria-label="Close">${IC.close}</button></div>`;
+sheet.addEventListener("click",e=>{ if(e.target===sheet) closeSheet(); });
+
+function apptSheet(id){
+  const a=db.appts.find(x=>x.id===id); if(!a) return;
+  const p=patient(a.patientId), nx=NEXT[a.status];
+  openSheet(head(esc(p?.name), `${esc(svc(a.serviceId).name)}, ${longDay(dayKey(a.start))}`)+`
+  <div class="sheet-body">
+    <dl class="kv">
+      <dt>Time</dt><dd>${tm(a.start)} to ${tm(a.end)}</dd>
+      <dt>Status</dt><dd><span class="chip st-${a.status}">${LABEL[a.status]}</span></dd>
+      <dt>Mobile</dt><dd>${p?.mobile?`<a href="tel:${esc(p.mobile)}" style="color:var(--accent)">${esc(fmtMobile(p.mobile))}</a>`:"—"}</dd>
+      <dt>Booked via</dt><dd>${a.source==="booking_site"?"Online booking":"Front desk"}</dd>
+    </dl>
+    <div class="sheet-foot" style="justify-content:flex-start">
+      ${nx.filter(s=>!["CANCELLED","NO_SHOW"].includes(s)).map(s=>`<button class="btn primary" data-status="${s}" data-id="${a.id}">${VERB[s]}</button>`).join("")}
+      <button class="btn" data-patient="${a.patientId}">Open patient</button>
+      ${nx.filter(s=>["CANCELLED","NO_SHOW"].includes(s)).map(s=>`<button class="btn ghost danger" data-status="${s}" data-id="${a.id}">${VERB[s]}</button>`).join("")}
+    </div>
+    ${!nx.length?`<p class="restricted">This appointment is closed. Book a new one to schedule a follow-up.</p>`:""}
+  </div>`);
+}
+function setStatus(id,status){
+  const a=db.appts.find(x=>x.id===id); if(!a||!NEXT[a.status].includes(status)){ toast("That change isn’t allowed from the current status."); return; }
+  if((status==="CANCELLED"||status==="NO_SHOW") && !confirm(`${VERB[status]} for ${patient(a.patientId)?.name}?`)) return;
+  log("appointment.status",`${a.status} → ${status}`); a.status=status; a.updatedAt=new Date().toISOString(); save();
+  closeSheet(); render(); toast(`${DONE[status]}: ${patient(a.patientId)?.name}`);
+}
+
+function freeSlots(dk,dur,ignoreId){
+  const {open,close}=hoursOf(dk), now=Date.now(), out=[];
+  const busy=db.appts.filter(a=>a.id!==ignoreId && ACTIVE.includes(a.status) && dayKey(a.start)===dk).map(a=>[+new Date(a.start),+new Date(a.end)]);
+  for(let m=open;m+dur<=close;m+=15){ const s=+new Date(at(dk,m)), e=s+dur*60000; if(s<now) continue; if(busy.some(([bs,be])=>s<be&&e>bs)) continue; out.push(m); }
+  return out;
+}
+function newApptSheet(prefill={}){
+  const dk = prefill.day || (selDay<today()?today():selDay);
+  openSheet(head("New appointment","Times shown in Philippine time")+`
+  <form class="sheet-body" id="apptForm" novalidate>
+    <div class="field"><label for="fPatient">Patient</label>
+      <select id="fPatient" class="input"><option value="">New patient</option>${db.patients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}" ${prefill.patientId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
+    <div class="grid2" id="newPt">
+      <div class="field"><label for="fName">Full name</label><input id="fName" class="input" autocomplete="off" maxlength="80"></div>
+      <div class="field"><label for="fMobile">Mobile number</label><input id="fMobile" class="input" inputmode="tel" placeholder="09XX XXX XXXX" maxlength="16"></div>
+    </div>
+    <div class="field"><label for="fSvc">Service</label><select id="fSvc" class="input">${SERVICES.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.dur} min)</option>`).join("")}</select></div>
+    <div class="grid2">
+      <div class="field"><label for="fDay">Date</label><input id="fDay" type="date" class="input" value="${dk}" min="${today()}"></div>
+      <div class="field"><label for="fTime">Time</label><select id="fTime" class="input"></select></div>
+    </div>
+    <p class="err" id="fErr" role="alert"></p>
+    <div class="sheet-foot"><button type="button" class="btn" data-action="close">Cancel</button><button class="btn primary" type="submit">Book appointment</button></div>
+  </form>`);
+  const sync=()=>{
+    $("#newPt").hidden = !!$("#fPatient").value;
+    const d=$("#fDay").value, dur=svc($("#fSvc").value).dur;
+    const slots = d ? freeSlots(d,dur) : [];
+    $("#fTime").innerHTML = slots.length ? slots.map(m=>`<option value="${m}">${tm(at(d,m))}</option>`).join("") : `<option value="">No open times</option>`;
+  };
+  ["fPatient","fSvc","fDay"].forEach(id=>$("#"+id).addEventListener("change",sync)); sync();
+  $("#apptForm").addEventListener("submit",e=>{
+    e.preventDefault(); const err=$("#fErr"); err.textContent="";
+    let pid=$("#fPatient").value;
+    const name=$("#fName").value.trim(), mob=normMobile($("#fMobile").value), d=$("#fDay").value, m=$("#fTime").value, sid=$("#fSvc").value;
+    if(!pid){ if(name.length<2){err.textContent="Enter the patient’s full name.";$("#fName").focus();return;} if(!mob){err.textContent="Enter a valid mobile number starting with 09, for example 0917 123 4567.";$("#fMobile").focus();return;}
+      const dup=db.patients.find(p=>p.mobile===mob && p.name.toLowerCase()===name.toLowerCase()); if(dup) pid=dup.id; }
+    if(!d||m===""){err.textContent="Choose a date with an open time.";return;}
+    const dur=svc(sid).dur; if(!freeSlots(d,dur).includes(+m)){err.textContent="That time was just taken. Pick another.";sync();return;}
+    if(!pid){ pid=uid(); db.patients.push({id:pid,name,mobile:mob,email:"",birthDate:"",address:"",allergies:"",conditions:"",consent:false,createdAt:new Date().toISOString()}); log("patient.create",name); }
+    const start=at(d,+m);
+    db.appts.push({id:uid(),patientId:pid,serviceId:sid,start,end:new Date(+new Date(start)+dur*60000).toISOString(),status:"SCHEDULED",source:"staff",createdAt:new Date().toISOString()});
+    log("appointment.create",`${svc(sid).name} ${start}`); save(); closeSheet(); selDay=d; view="today"; render();
+    toast(`Booked ${patient(pid).name} for ${tm(start)}`);
+  });
+}
+function normMobile(v){ let s=String(v).replace(/[\s-]/g,""); if(s.startsWith("+63")) s="0"+s.slice(3); else if(s.startsWith("63")&&s.length===12) s="0"+s.slice(2); return /^09\d{9}$/.test(s)?s:""; }
+
+let pTab="profile";
+function patientSheet(pid,tab){
+  const p=patient(pid); if(!p) return; if(tab) pTab=tab;
+  const tabs=[["profile","Profile"],["visits","Visits"],...(R().clinical?[["clinical","Clinical notes"]]:[]),["ledger","Payments"]];
+  if(!tabs.some(t=>t[0]===pTab)) pTab="profile";
+  const b=balanceOf(pid);
+  openSheet(head(esc(p.name), `${esc(fmtMobile(p.mobile))}${b>0?`, balance ${peso(b)}`:""}`)+`
+  <div class="sheet-body" style="padding-top:0">
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===pTab}" data-ptab="${k}" data-pid="${pid}">${l}</button>`).join("")}</div>
+    ${pTab==="profile"?profileTab(p):pTab==="visits"?visitsTab(p):pTab==="clinical"?clinicalTab(p):ledgerTab(p)}
+  </div>`);
+  bindPatientForms(p);
+}
+function profileTab(p){
+  return `<form id="profForm" class="sheet-body" style="padding:0" novalidate>
+    <div class="grid2">
+      <div class="field"><label for="pName">Full name</label><input id="pName" class="input" value="${esc(p.name)}" maxlength="80"></div>
+      <div class="field"><label for="pMob">Mobile</label><input id="pMob" class="input" inputmode="tel" value="${esc(p.mobile)}"></div>
+      <div class="field"><label for="pEmail">Email</label><input id="pEmail" type="email" class="input" value="${esc(p.email)}"></div>
+      <div class="field"><label for="pBirth">Birth date</label><input id="pBirth" type="date" class="input" value="${esc(p.birthDate)}"></div>
+    </div>
+    <div class="field"><label for="pAddr">Address</label><input id="pAddr" class="input" value="${esc(p.address)}"></div>
+    ${R().clinical?`<div class="grid2"><div class="field"><label for="pAll">Allergies</label><input id="pAll" class="input" value="${esc(p.allergies)}"></div><div class="field"><label for="pCond">Medical conditions</label><input id="pCond" class="input" value="${esc(p.conditions)}"></div></div>`
+      :`<p class="restricted">Medical history is visible to the dentist and owner only.</p>`}
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" id="pConsent" ${p.consent?"checked":""} style="margin-top:4px;width:18px;height:18px;accent-color:var(--accent)"> Patient consented to data processing under the Data Privacy Act</label>
+    <p class="err" id="pErr" role="alert"></p>
+    <div class="sheet-foot"><button class="btn primary" type="submit">Save profile</button></div>
+  </form>`;
+}
+function visitsTab(p){
+  const v=db.appts.filter(a=>a.patientId===p.id).sort((a,b)=>b.start.localeCompare(a.start));
+  return `${v.length?`<div>${v.map(a=>`<div class="pay"><span>${esc(svc(a.serviceId).name)}<br><small>${shortDate(a.start)}, ${tm(a.start)}</small></span><span class="chip st-${a.status}">${LABEL[a.status]}</span></div>`).join("")}</div>`:`<div class="empty"><strong>No visits yet</strong>Book the first appointment below.</div>`}
+  <div class="sheet-foot"><button class="btn primary" data-action="book-for" data-pid="${p.id}">Book appointment</button></div>`;
+}
+function clinicalTab(p){
+  const e=db.clinical.filter(c=>c.patientId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  return `${p.allergies?`<p class="restricted" style="color:var(--danger)">Allergy: ${esc(p.allergies)}</p>`:""}
+  <form id="clinForm" class="sheet-body" style="padding:0" novalidate>
+    <div class="grid2"><div class="field"><label for="cTeeth">Tooth numbers</label><input id="cTeeth" class="input" placeholder="e.g. 36, 46"></div><div class="field"><label for="cDx">Diagnosis</label><input id="cDx" class="input"></div></div>
+    <div class="field"><label for="cProc">Procedure</label><input id="cProc" class="input"></div>
+    <div class="field"><label for="cNotes">Notes</label><textarea id="cNotes" class="input"></textarea></div>
+    <p class="err" id="cErr" role="alert"></p>
+    <div class="sheet-foot"><button class="btn primary" type="submit">Add note</button></div>
+  </form>
+  <div>${e.length?e.map(c=>`<div class="entry"><b>${esc(c.procedure||c.diagnosis||"Note")}</b>${c.teeth?` <small>tooth ${esc(c.teeth)}</small>`:""}<br><small>${shortDate(c.date+"T12:00:00+08:00")}, ${esc(c.by)}</small>${c.diagnosis?`<div>Diagnosis: ${esc(c.diagnosis)}</div>`:""}${c.notes?`<div style="color:var(--muted)">${esc(c.notes)}</div>`:""}</div>`).join(""):`<div class="empty"><strong>No clinical notes yet</strong>Add the first note above.</div>`}</div>`;
+}
+function ledgerTab(p){
+  const accts=db.accounts.filter(a=>a.patientId===p.id);
+  const pays=db.payments.filter(x=>x.patientId===p.id).sort((a,b)=>b.paidAt.localeCompare(a.paidAt));
+  const openAccts=accts.filter(a=>a.status==="ACTIVE");
+  return `${accts.length?accts.map(a=>{const paid=paidOn(a.id);return `<div class="acct"><div class="acct-top"><b>${esc(a.name)}</b><span class="chip ${a.status==="PAID"?"st-COMPLETED":"st-CONFIRMED"}">${a.status==="PAID"?"Paid":"Active"}</span></div><div class="prog"><i style="width:${Math.min(paid/a.agreed*100,100)}%"></i></div><div class="acct-nums"><span>Paid ${peso(paid)} of ${peso(a.agreed)}</span><span>Balance ${peso(a.agreed-paid)}</span></div></div>`}).join("")
+    :`<div class="empty"><strong>No treatment plans</strong>${R().pay?"Create one below for braces or other staged treatment.":"Reception or the owner can create one."}</div>`}
+  ${R().pay && openAccts.length?`<form id="payForm" class="acct" novalidate><b style="display:block;margin-bottom:12px">Record payment</b>
+    <div class="grid2">
+      <div class="field"><label for="yAcct">Plan</label><select id="yAcct" class="input">${openAccts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></div>
+      <div class="field"><label for="yAmt">Amount (₱)</label><input id="yAmt" class="input" inputmode="decimal" placeholder="0.00"></div>
+      <div class="field"><label for="yMethod">Method</label><select id="yMethod" class="input"><option value="CASH">Cash</option><option value="GCASH">GCash</option><option value="CARD">Card</option><option value="BANK">Bank transfer</option></select></div>
+      <div class="field"><label for="yRef">Reference no.</label><input id="yRef" class="input" placeholder="Optional"></div>
+    </div><p class="err" id="yErr" role="alert"></p><div class="sheet-foot"><button class="btn primary" type="submit">Record payment</button></div></form>`:""}
+  ${R().pay?`<details><summary style="cursor:pointer;font-weight:600;font-size:14px;padding:4px 0">New treatment plan</summary>
+    <form id="acctForm" class="sheet-body" style="padding:12px 0 0" novalidate>
+      <div class="field"><label for="nName">Treatment</label><input id="nName" class="input" placeholder="e.g. Braces (upper and lower)"></div>
+      <div class="grid2"><div class="field"><label for="nAmt">Agreed amount (₱)</label><input id="nAmt" class="input" inputmode="decimal"></div><div class="field"><label for="nDown">Down payment (₱)</label><input id="nDown" class="input" inputmode="decimal" placeholder="0.00"></div></div>
+      <p class="err" id="nErr" role="alert"></p><div class="sheet-foot"><button class="btn primary" type="submit">Create plan</button></div></form></details>`:""}
+  <div><b style="font-size:14px">Receipts</b>${pays.length?pays.map(x=>`<div class="pay"><span class="${x.voided?"void":""}">${peso(x.amount)} <small>${x.method}</small><br><small>${x.receipt}, ${shortDate(x.paidAt)}</small></span><span>${x.voided?`<small style="color:var(--danger)">Voided</small>`:""}</span>
+    <div class="actions"><button class="btn sm" data-receipt="${x.id}">View receipt</button>${R().void&&!x.voided?`<button class="btn sm ghost danger" data-void="${x.id}">Void</button>`:""}</div></div>`).join(""):`<p style="color:var(--muted);font-size:14px;margin-top:6px">No payments recorded.</p>`}</div>`;
+}
+const toCents = v => { const s=String(v).replace(/[,₱\s]/g,""); if(!/^\d+(\.\d{1,2})?$/.test(s)) return NaN; return Math.round(parseFloat(s)*100); };
+function nextReceipt(){ db.seq=(db.seq||0)+1; return "DS-"+today().slice(0,4)+"-"+String(db.seq).padStart(5,"0"); }
+function bindPatientForms(p){
+  const f=$("#profForm");
+  if(f) f.addEventListener("submit",e=>{ e.preventDefault(); const err=$("#pErr");
+    const name=$("#pName").value.trim(), mob=$("#pMob").value.trim()?normMobile($("#pMob").value):"", email=$("#pEmail").value.trim();
+    if(name.length<2){err.textContent="Enter the patient’s full name.";return;}
+    if($("#pMob").value.trim()&&!mob){err.textContent="Mobile must start with 09 and have 11 digits.";return;}
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent="Enter a valid email or leave it blank.";return;}
+    Object.assign(p,{name,mobile:mob,email,birthDate:$("#pBirth").value,address:$("#pAddr").value.trim(),consent:$("#pConsent").checked});
+    if(R().clinical){ p.allergies=$("#pAll").value.trim(); p.conditions=$("#pCond").value.trim(); } // other roles never overwrite medical fields
+    p.updatedAt=new Date().toISOString(); log("patient.update",p.name); save(); render(); patientSheet(p.id); toast("Profile saved");
+  });
+  const c=$("#clinForm");
+  if(c) c.addEventListener("submit",e=>{ e.preventDefault(); const dx=$("#cDx").value.trim(), pr=$("#cProc").value.trim(), no=$("#cNotes").value.trim();
+    if(!dx&&!pr&&!no){$("#cErr").textContent="Add a diagnosis, procedure, or note.";return;}
+    db.clinical.push({id:uid(),patientId:p.id,date:today(),teeth:$("#cTeeth").value.trim(),diagnosis:dx,procedure:pr,notes:no,by:R().person});
+    log("clinical.create",p.name); save(); patientSheet(p.id); toast("Note added");
+  });
+  const y=$("#payForm");
+  if(y) y.addEventListener("submit",e=>{ e.preventDefault(); const err=$("#yErr"), acc=db.accounts.find(a=>a.id===$("#yAcct").value), amt=toCents($("#yAmt").value);
+    if(!acc){err.textContent="Choose a plan.";return;}
+    if(!(amt>0)){err.textContent="Enter an amount like 1500 or 1500.50.";return;}
+    const bal=acc.agreed-paidOn(acc.id); if(amt>bal){err.textContent=`That’s more than the ${peso(bal)} balance.`;return;}
+    const method=$("#yMethod").value, ref=$("#yRef").value.trim();
+    if(method!=="CASH"&&!ref){err.textContent="Add the reference number for GCash, card or bank payments.";return;}
+    const pay={id:uid(),accountId:acc.id,patientId:p.id,amount:amt,method,ref,paidAt:new Date().toISOString(),receipt:nextReceipt(),voided:false,voidReason:"",by:R().person};
+    db.payments.push(pay); if(paidOn(acc.id)>=acc.agreed) acc.status="PAID";
+    log("payment.create",pay.receipt); save(); render(); receiptSheet(pay.id); toast(`Payment recorded, receipt ${pay.receipt}`);
+  });
+  const n=$("#acctForm");
+  if(n) n.addEventListener("submit",e=>{ e.preventDefault(); const err=$("#nErr"), name=$("#nName").value.trim(), amt=toCents($("#nAmt").value), down=$("#nDown").value.trim()?toCents($("#nDown").value):0;
+    if(!name){err.textContent="Name the treatment.";return;} if(!(amt>0)){err.textContent="Enter the agreed amount.";return;}
+    if(!(down>=0)||down>amt){err.textContent="Down payment must be between ₱0 and the agreed amount.";return;}
+    const acc={id:uid(),patientId:p.id,name,agreed:amt,start:today(),status:down===amt?"PAID":"ACTIVE"}; db.accounts.push(acc);
+    if(down>0) db.payments.push({id:uid(),accountId:acc.id,patientId:p.id,amount:down,method:"CASH",ref:"",paidAt:new Date().toISOString(),receipt:nextReceipt(),voided:false,voidReason:"",by:R().person});
+    log("account.create",name); save(); render(); patientSheet(p.id,"ledger"); toast("Treatment plan created");
+  });
+}
+function receiptSheet(id){
+  const x=db.payments.find(y=>y.id===id); if(!x) return; const p=patient(x.patientId), a=db.accounts.find(z=>z.id===x.accountId);
+  openSheet(head("Receipt",x.receipt)+`<div class="sheet-body"><div class="receipt" id="printArea">
+    <div class="rhead"><div><b style="font-size:17px">Dentspace</b><br><small style="color:var(--muted)">Official receipt (sample)</small></div><div style="text-align:right"><b>${x.receipt}</b><br><small style="color:var(--muted)">${shortDate(x.paidAt)}, ${tm(x.paidAt)}</small></div></div>
+    <dl class="kv"><dt>Received from</dt><dd>${esc(p?.name)}</dd><dt>For</dt><dd>${esc(a?.name)}</dd><dt>Method</dt><dd>${x.method}${x.ref?`, ref ${esc(x.ref)}`:""}</dd><dt>Recorded by</dt><dd>${esc(x.by)}</dd><dt>Balance after</dt><dd>${a?peso(a.agreed-paidOn(a.id)):"—"}</dd></dl>
+    <div class="amt"><small>Amount received</small><b>${peso(x.amount)}</b></div>
+    ${x.voided?`<p class="voided">VOIDED: ${esc(x.voidReason)}</p>`:""}
+  </div><div class="sheet-foot no-print"><button class="btn" data-patient="${x.patientId}" data-tab="ledger">Back</button><button class="btn primary" data-action="print">Print receipt</button></div></div>`);
+}
+function voidPayment(id){
+  const x=db.payments.find(y=>y.id===id); if(!x||x.voided||!R().void) return;
+  const reason=prompt(`Reason for voiding ${x.receipt}? This can’t be undone.`); if(reason===null) return;
+  if(!reason.trim()){ toast("A reason is required to void a receipt."); return; }
+  x.voided=true; x.voidReason=reason.trim(); x.voidedBy=R().person; x.voidedAt=new Date().toISOString();
+  const a=db.accounts.find(z=>z.id===x.accountId); if(a&&a.status==="PAID"&&paidOn(a.id)<a.agreed) a.status="ACTIVE";
+  log("payment.void",`${x.receipt}: ${x.voidReason}`); save(); render(); patientSheet(x.patientId,"ledger"); toast(`Voided ${x.receipt}`);
+}
+function accountSheet(){
+  openSheet(head("Account",`${esc(R().person)}, ${R().name}`)+`<div class="sheet-body"><p style="color:var(--muted);font-size:14px">${R().note}</p>
+  <div class="sheet-foot" style="justify-content:flex-start"><button class="btn" data-action="reset">Reset sample data</button><button class="btn" data-action="signout">Sign out</button></div></div>`);
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-action]"); if(!t) return;
+  const d=t.dataset;
+  if(d.view){ view=d.view; closeSheet(); render(); scrollTo({top:0}); return; }
+  if(d.day){ selDay=d.day; render(); return; }
+  if(d.shift){ selDay=addDays(selDay,+d.shift); render(); return; }
+  if(d.appt){ apptSheet(d.appt); return; }
+  if(d.status){ setStatus(d.id,d.status); return; }
+  if(d.patient){ patientSheet(d.patient,d.tab||"profile"); return; }
+  if(d.ptab){ patientSheet(d.pid,d.ptab); return; }
+  if(d.receipt){ receiptSheet(d.receipt); return; }
+  if(d.void){ voidPayment(d.void); return; }
+  switch(d.action){
+    case "close": closeSheet(); break;
+    case "new-appt": newApptSheet(); break;
+    case "book-for": newApptSheet({patientId:d.pid}); break;
+    case "print": window.print(); break;
+    case "menu": accountSheet(); break;
+    case "reset": if(confirm("Reset all sample data to the starting state?")){ db=seed(); save(); closeSheet(); render(); toast("Sample data reset"); } break;
+    case "signout": closeSheet(); $("#app").hidden=true; $("#login").hidden=false; scrollToNow.done=false; break;
+  }
+});
+document.addEventListener("input",e=>{ if(e.target.id==="q"){ q=e.target.value; const pos=e.target.selectionStart; $("#view").innerHTML=renderPatients(); const i=$("#q"); i.focus(); i.setSelectionRange(pos,pos); } });
+
+db = load(); save();
+</script>
+</body>
+</html>
