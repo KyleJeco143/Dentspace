@@ -15,10 +15,13 @@ $ctx = stream_context_create(['http' => ['method' => 'POST', 'timeout' => 20, 'i
 $body = @file_get_contents($u, false, $ctx);
 echo "\nGoogle status: " . ($http_response_header[0] ?? '(no response at all)') . "\n";
 foreach ($http_response_header ?? [] as $h) if (stripos($h, 'Location:') === 0) echo "Redirect to:   " . substr($h, 0, 70) . "...\n";
-echo "Body (first 200): " . substr(trim((string)$body), 0, 200) . "\n\n";
+// The script's own answer ("ok" or "forbidden") sits behind the redirect.
+foreach ($http_response_header ?? [] as $h) if (stripos($h, 'Location:') === 0) {
+    $body = @file_get_contents(trim(substr($h, 9)), false, stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]));
+}
+echo "Script answered: " . substr(trim((string)$body), 0, 200) . "\n\n";
 if ($body === false) echo "Could not reach Google. The server may block outgoing HTTPS.\n";
 elseif (stripos($body, 'forbidden') !== false) echo "The SECRET does not match the one in the script. Run: bash set-sheet.sh and retype it exactly.\n";
 elseif (stripos($body, 'ok') === 0) echo "SUCCESS. Look for a row 'Sheet Test' in the Bookings tab.\n";
 elseif (stripos($body, '404') !== false || stripos($body, 'not found') !== false || stripos($body, 'Sorry, unable to open') !== false) echo "Google cannot find that deployment. The Deployment ID has a typo, or the deployment was replaced.\n";
-elseif (preg_match('#^HTTP/\S+ 302#', $http_response_header[0] ?? '')) echo "Google redirected (normal). The row should have been written; check the Bookings tab.\n";
 else echo "Unexpected reply. Send me the lines above.\n";
