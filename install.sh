@@ -69,7 +69,7 @@ EOF
 fi
 ln -sf /etc/nginx/sites-available/dentspace /etc/nginx/sites-enabled/dentspace
 rm -f /etc/nginx/sites-enabled/default
-if ! grep -q "manage" /etc/nginx/sites-available/dentspace; then
+if ! grep -q "admin|manage|setup" /etc/nginx/sites-available/dentspace; then
   sed -i 's/(availability|book|admin|setup)/(availability|book|admin|manage|setup)/' /etc/nginx/sites-available/dentspace
 fi
 nginx -t
