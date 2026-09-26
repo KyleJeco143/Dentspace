@@ -41,19 +41,27 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const clean = v => { v = String(v == null ? '' : v); return /^[=+\-@]/.test(v) ? "'" + v : v; }; // stop spreadsheet formulas
     const bk = ss.getSheetByName('Bookings');
-    bk.appendRow([d.ref, d.bookedAt, d.name, d.mobile, d.email, d.service, d.date, d.time, d.status, d.source].map(clean));
+    // Phone numbers, dates and times are written as plain text so Sheets keeps "0917..." and "9:00 AM" as typed.
+    const putText = (sh, row, col, val) => sh.getRange(row, col).setNumberFormat('@').setValue(String(val));
+    const digits = v => String(v).replace(/\D/g, '').replace(/^0+/, ''); // 09170000009 and 9170000009 are the same person
+    bk.appendRow([d.ref, d.bookedAt, d.name, '', d.email, d.service, '', '', d.status, d.source].map(clean));
+    const br = bk.getLastRow();
+    putText(bk, br, 4, d.mobile); putText(bk, br, 7, d.date); putText(bk, br, 8, d.time);
 
     const pt = ss.getSheetByName('Patients');
     const rows = pt.getLastRow() > 1 ? pt.getRange(2, 1, pt.getLastRow() - 1, PATIENT_HEADERS.length).getValues() : [];
-    const i = rows.findIndex(r => String(r[1]) === String(d.mobile) && String(r[0]).toLowerCase() === String(d.name).toLowerCase());
+    const i = rows.findIndex(r => digits(r[1]) === digits(d.mobile) && String(r[0]).toLowerCase() === String(d.name).toLowerCase());
     const when = d.date + ' ' + d.time;
     if (i >= 0) {
       const r = i + 2;
       pt.getRange(r, 4).setValue((Number(rows[i][3]) || 0) + 1);
-      pt.getRange(r, 5).setValue(when);
+      putText(pt, r, 5, when);
+      putText(pt, r, 2, d.mobile);
       if (d.email && !rows[i][2]) pt.getRange(r, 3).setValue(clean(d.email));
     } else {
-      pt.appendRow([d.name, d.mobile, d.email, 1, when, d.bookedAt].map(clean));
+      pt.appendRow([d.name, '', d.email, 1, '', d.bookedAt].map(clean));
+      const pr = pt.getLastRow();
+      putText(pt, pr, 2, d.mobile); putText(pt, pr, 5, when);
     }
     return out('ok');
   } finally {
