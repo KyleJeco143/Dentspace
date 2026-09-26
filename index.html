@@ -129,7 +129,7 @@ h1,h2,h3,p{margin:0}
 
 <header class="top">
   <div class="brand"><span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-1.5-1.3-3.3-2-5-1.5C4.6 4.6 4 7 4.4 9.3c.4 2.2 1.2 3.9 1.6 6.2.4 2.4.7 4.5 2 4.5 1.6 0 1.5-4.5 4-4.5s2.4 4.5 4 4.5c1.3 0 1.6-2.1 2-4.5.4-2.3 1.2-4 1.6-6.2C20 7 19.4 4.6 17 4c-1.7-.5-3.5.2-5 1.5z"/></svg></span>Dentspace</div>
-  <a href="#svcStep">Book a visit</a>
+  <nav style="display:flex;gap:18px"><a href="#svcStep" id="bookLink">Book a visit</a><a href="#" id="manageLink">Manage booking</a></nav>
 </header>
 
 <main id="bookView">
@@ -141,6 +141,7 @@ h1,h2,h3,p{margin:0}
         <div class="hours" aria-label="Clinic hours">
           <div><b>Mon to Sat</b><span>9:00 AM to 5:00 PM</span></div>
           <div><b>Sunday</b><span>9:00 AM to 12:00 NN</span></div>
+          <div><b>Call us</b><span><a href="tel:09760232985" style="color:inherit">0976 023 2985</a></span></div>
         </div>
       </section>
 
@@ -198,7 +199,27 @@ h1,h2,h3,p{margin:0}
     <div class="sum-row"><span>Name</span><b id="dName"></b></div>
   </div>
   <button class="btn primary" id="again">Book another visit</button>
-  <p class="fine" style="text-align:center">Please arrive 10 minutes early. To change or cancel, contact the clinic and give your reference number.</p>
+  <p class="fine" style="text-align:center">Please arrive 10 minutes early. To change or cancel, use Manage booking at the top, or call the clinic on <a href="tel:09760232985" style="color:inherit">0976 023 2985</a> and give your reference number.</p>
+</main>
+
+<main id="manageView" class="done-view" hidden>
+  <h1 id="mTitle2" tabindex="-1">Manage your booking</h1>
+  <p style="color:var(--muted)">Enter the reference number from your confirmation and the mobile number you booked with.</p>
+  <form id="mForm" class="fields" style="margin-top:22px" novalidate>
+    <div class="field"><label for="mRef">Reference number</label><input class="input" id="mRef" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false"></div>
+    <div class="field"><label for="mMob">Mobile number</label><input class="input" id="mMob" type="tel" inputmode="tel" maxlength="16" placeholder="0917 123 4567" autocomplete="off"></div>
+    <p class="err" id="mErr" role="alert"></p>
+    <button class="btn primary" id="mFind" type="submit">Find my booking</button>
+  </form>
+  <div id="mResult" class="ticket" hidden>
+    <div class="sum-row" style="border-top:0"><span>Reference</span><b id="rRef"></b></div>
+    <div class="sum-row"><span>Service</span><b id="rSvc"></b></div>
+    <div class="sum-row"><span>When</span><b id="rWhen"></b></div>
+    <div class="sum-row"><span>Status</span><b id="rStatus"></b></div>
+  </div>
+  <p class="fine" id="mNote" hidden></p>
+  <button class="btn" id="mCancel" style="margin-top:14px;color:var(--danger)" hidden>Cancel this booking</button>
+  <button class="btn" id="mBack" style="margin-top:12px">Back to booking</button>
 </main>
 
 <script>
@@ -328,6 +349,45 @@ $("#again").addEventListener("click",()=>{
   Object.assign(state,{svc:null,day:null,time:null,busy:false}); $("#form").reset();
   $("#doneView").hidden=true; $("#bookView").hidden=false; $("#mbar").hidden=false;
   renderServices(); renderDays(); renderSlots(); sync(); scrollTo({top:0}); loadBusy().then(refresh);
+});
+
+/* ---- Manage a booking (look up by reference + mobile, cancel) ---- */
+const STATUS_TEXT={SCHEDULED:"Booked",CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Completed",CANCELLED:"Cancelled",NO_SHOW:"Missed"};
+let mCreds=null;
+function resetManage(){ $("#mForm").hidden=false; $("#mResult").hidden=true; $("#mNote").hidden=true; $("#mCancel").hidden=true; $("#mErr").textContent=""; mCreds=null; }
+$("#manageLink").addEventListener("click",e=>{ e.preventDefault(); resetManage(); $("#bookView").hidden=true; $("#doneView").hidden=true; $("#mbar").hidden=true; $("#manageView").hidden=false; scrollTo({top:0}); $("#mTitle2").focus(); });
+$("#mBack").addEventListener("click",()=>{ $("#manageView").hidden=true; $("#bookView").hidden=false; $("#mbar").hidden=false; resetManage(); loadBusy().then(refresh); });
+async function manageCall(action){
+  const res=await fetch("api/manage.php",{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"dentspace"},body:JSON.stringify({action,ref:mCreds.ref,mobile:mCreds.mobile})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||"Something went wrong. Please try again.");
+  return data;
+}
+function showBooking(d){
+  $("#rRef").textContent=d.ref; $("#rSvc").textContent=d.service;
+  $("#rWhen").textContent=`${fmt(dayKey(d.start),{weekday:"short",month:"short",day:"numeric"})}, ${tm(d.start)}`;
+  $("#rStatus").textContent=STATUS_TEXT[d.status]||d.status;
+  $("#mForm").hidden=true; $("#mResult").hidden=false;
+  $("#mCancel").hidden=!d.canCancel;
+  const note=$("#mNote");
+  if(d.status==="CANCELLED"){ note.textContent="This booking is cancelled. You can book a new time any time."; note.hidden=false; }
+  else if(!d.canCancel){ note.textContent="This booking can no longer be changed online. Please call the clinic on 0976 023 2985 and give your reference number."; note.hidden=false; }
+  else { note.textContent="To change the time, cancel this booking and book a new one."; note.hidden=false; }
+}
+$("#mForm").addEventListener("submit",async e=>{
+  e.preventDefault(); const err=$("#mErr"); err.textContent="";
+  const ref=$("#mRef").value.trim().toUpperCase(), mob=normMobile($("#mMob").value);
+  if(!ref){ err.textContent="Enter your reference number."; $("#mRef").focus(); return; }
+  if(!mob){ err.textContent="Enter the 11-digit mobile number you booked with."; $("#mMob").focus(); return; }
+  mCreds={ref,mobile:mob}; const btn=$("#mFind"); btn.disabled=true;
+  try{ showBooking(await manageCall("lookup")); }catch(ex){ err.textContent=ex.message; mCreds=null; }
+  btn.disabled=false;
+});
+$("#mCancel").addEventListener("click",async()=>{
+  if(!mCreds||!confirm("Cancel this booking? This cannot be undone.")) return;
+  const btn=$("#mCancel"); btn.disabled=true;
+  try{ showBooking(await manageCall("cancel")); }catch(ex){ $("#mNote").textContent=ex.message; $("#mNote").hidden=false; }
+  btn.disabled=false;
 });
 
 renderServices(); renderDays(); renderSlots(); sync(); loadBusy().then(refresh);

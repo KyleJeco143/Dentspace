@@ -71,9 +71,12 @@ if ($a === 'state') {
 }
 
 if ($a === 'save') {
+    $GLOBALS['ds_events'] = [];
     $in = require_post();
     $fixes = with_lock(fn() => save_changes($in, $user));
-    json_out(['ok' => true, 'fixes' => $fixes]);
+    respond_and_continue(['ok' => true, 'fixes' => $fixes]);
+    foreach ($GLOBALS['ds_events'] as $ev) if (!empty($ev['mobile']) || ($ev['action'] ?? '') === 'status') push_sheet($ev);
+    exit;
 }
 
 throw new ApiError(404, 'Unknown action');
@@ -132,6 +135,7 @@ function save_changes(array $in, array $user): array {
                     if (!in_array($status, NEXT[$old['status']], true)) throw new ApiError(409, 'That status change isn’t allowed.');
                     q('UPDATE appointments SET status=?, updated_at=? WHERE id=?', [$status, $now, $x['id']]);
                     audit($user, 'appointment.status', "{$old['status']} → $status ({$x['id']})");
+                    if (!empty($old['ref'])) $GLOBALS['ds_events'][] = ['action' => 'status', 'ref' => $old['ref'], 'status' => $status];
                 }
                 continue;
             }
@@ -142,8 +146,14 @@ function save_changes(array $in, array $user): array {
             if (!$start || !within_hours($start, SERVICES[$sid])) throw new ApiError(422, 'That time is outside clinic hours.');
             $end = $start->modify('+' . SERVICES[$sid] . ' minutes');
             if (overlaps(db_dt($start), db_dt($end))) throw new ApiError(409, 'That time was just taken. Pick another.', 'slot_taken');
-            q("INSERT INTO appointments (id, patient_id, service_id, start_at, end_at, status, source, created_at) VALUES (?,?,?,?,?,'SCHEDULED','staff',?)",
-                [$x['id'], $x['patientId'], $sid, db_dt($start), db_dt($end), $now]);
+            $ref = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+            q("INSERT INTO appointments (id, patient_id, service_id, start_at, end_at, status, source, ref, created_at) VALUES (?,?,?,?,?,'SCHEDULED','staff',?,?)",
+                [$x['id'], $x['patientId'], $sid, db_dt($start), db_dt($end), $ref, $now]);
+            $pp = q('SELECT name, mobile, email FROM patients WHERE id = ?', [$x['patientId']])->fetch();
+            $local = $start->setTimezone(new DateTimeZone(CLINIC_TZ));
+            $GLOBALS['ds_events'][] = ['ref' => $ref, 'bookedAt' => (new DateTimeImmutable('now', new DateTimeZone(CLINIC_TZ)))->format('Y-m-d H:i'),
+                'name' => $pp['name'], 'mobile' => $pp['mobile'], 'email' => $pp['email'], 'service' => SERVICE_NAMES[$sid] ?? $sid,
+                'date' => $local->format('Y-m-d'), 'time' => $local->format('g:i A'), 'status' => 'SCHEDULED', 'source' => 'Front desk'];
             audit($user, 'appointment.create', "$sid " . db_dt($start));
         }
 

@@ -245,3 +245,16 @@ function push_sheet(array $row): bool {
         return false;
     }
 }
+
+/* Send the answer to the browser now, then let the script keep working (email, Sheet) without making anyone wait. */
+function respond_and_continue(array $data, int $status = 200): void {
+    http_response_code($status);
+    ignore_user_abort(true);
+    ob_start();
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    header('Content-Length: ' . ob_get_length());
+    header('Connection: close');
+    ob_end_flush();
+    flush();
+    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+}

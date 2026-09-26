@@ -40,6 +40,15 @@ function doPost(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const clean = v => { v = String(v == null ? '' : v); return /^[=+\-@]/.test(v) ? "'" + v : v; }; // stop spreadsheet formulas
+    if (d.action === 'status') { // a booking was cancelled / confirmed / completed: update its Status cell
+      const sheet = ss.getSheetByName('Bookings'), last = sheet.getLastRow();
+      if (last > 1) {
+        const refs = sheet.getRange(2, 1, last - 1, 1).getValues();
+        const idx = refs.findIndex(r => String(r[0]) === String(d.ref));
+        if (idx >= 0) sheet.getRange(idx + 2, 9).setValue(clean(d.status));
+      }
+      return out('ok');
+    }
     const bk = ss.getSheetByName('Bookings');
     // Phone numbers, dates and times are written as plain text so Sheets keeps "0917..." and "9:00 AM" as typed.
     const putText = (sh, row, col, val) => sh.getRange(row, col).setNumberFormat('@').setValue(String(val));
