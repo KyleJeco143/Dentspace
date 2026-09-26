@@ -43,6 +43,7 @@ chmod 640 "$WEB/api/config.php"
 echo "== nginx"
 NAMES="_"
 [ -f /etc/nginx/sites-available/dentspace ] && NAMES="$(grep -m1 server_name /etc/nginx/sites-available/dentspace | sed 's/server_name//; s/;//')"
+if ! grep -q "managed by Certbot" /etc/nginx/sites-available/dentspace 2>/dev/null; then
 cat > /etc/nginx/sites-available/dentspace <<EOF
 server {
     listen 80 default_server;
@@ -65,6 +66,7 @@ server {
     location ~ ^/api/ { return 404; }
 }
 EOF
+fi
 ln -sf /etc/nginx/sites-available/dentspace /etc/nginx/sites-enabled/dentspace
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
