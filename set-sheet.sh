@@ -3,7 +3,12 @@
 set -euo pipefail
 CONF=/var/www/dentspace/api/config.php
 [ -f "$CONF" ] || { echo "config.php not found. Run install.sh first."; exit 1; }
-read -r -p "Web app URL (https://script.google.com/macros/s/.../exec): " URL
+read -r -p "Web app URL, or just the Deployment ID (the AKfycby... text): " URL
+URL="${URL// /}"
+case "$URL" in
+  https://*) ;;
+  AKfy*) URL="https://script.google.com/macros/s/$URL/exec" ;;
+esac
 read -r -s -p "The SECRET you put in the script (hidden as you type): " SEC
 echo
 [ -n "$URL" ] && [ -n "$SEC" ] || { echo "Both are required."; exit 1; }
