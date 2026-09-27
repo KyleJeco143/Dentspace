@@ -619,7 +619,8 @@ function newApptSheet(prefill={}){
     let pid=$("#fPatient").value;
     const name=$("#fName").value.trim(), mob=normMobile($("#fMobile").value), d=$("#fDay").value, m=$("#fTime").value, sid=$("#fSvc").value;
     if(!pid){ if(name.length<2){err.textContent="Enter the patient’s full name.";$("#fName").focus();return;} if(!mob){err.textContent="Enter a valid mobile number starting with 09, for example 0917 123 4567.";$("#fMobile").focus();return;}
-      const dup=db.patients.find(p=>p.mobile===mob && p.name.toLowerCase()===name.toLowerCase()); if(dup) pid=dup.id; }
+      const norm=s=>String(s||"").trim().replace(/\s+/g," ").toLowerCase();
+      const dup=db.patients.find(p=>norm(p.name)===norm(name)); if(dup){ pid=dup.id; dup.mobile=mob; } }
     if(!d||m===""){err.textContent="Choose a date with an open time.";return;}
     const dur=svc(sid).dur; if(!freeSlots(d,dur).includes(+m)){err.textContent="That time was just taken. Pick another.";sync();return;}
     if(!pid){ pid=uid(); db.patients.push({id:pid,name,mobile:mob,email:"",birthDate:"",address:"",allergies:"",conditions:"",consent:false,createdAt:new Date().toISOString()}); log("patient.create",name); }

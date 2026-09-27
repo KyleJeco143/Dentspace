@@ -1,8 +1,9 @@
 <?php
-// Lists patients, or removes one patient and everything tied to them (appointments, notes,
-// payments, treatment plans, receipts). Run on the server:
+// Lists patients, removes one patient and everything tied to them, or merges two duplicate
+// patient records into one. Run on the server:
 //   php manage-patients.php list
 //   php manage-patients.php delete <id>
+//   php manage-patients.php merge <keep-id> <other-id>
 require __DIR__ . '/lib.php';
 $cmd = $argv[1] ?? '';
 $fmtMobile = fn($m) => $m ? preg_replace('/(\d{4})(\d{3})(\d{4})/', '$1 $2 $3', $m) : '(none)';
@@ -47,4 +48,36 @@ if ($cmd === 'delete') {
     exit;
 }
 
-echo "Usage:\n  php manage-patients.php list\n  php manage-patients.php delete <id>\n";
+if ($cmd === 'merge') {
+    $keepId = $argv[2] ?? '';
+    $otherId = $argv[3] ?? '';
+    if (!valid_id($keepId) || !valid_id($otherId)) exit("Usage: php manage-patients.php merge <keep-id> <other-id>\nRun 'list' first to get both ids.\n");
+    if ($keepId === $otherId) exit("Those are the same id.\n");
+    $keep = q('SELECT * FROM patients WHERE id = ?', [$keepId])->fetch();
+    $other = q('SELECT * FROM patients WHERE id = ?', [$otherId])->fetch();
+    if (!$keep) exit("No patient with id $keepId.\n");
+    if (!$other) exit("No patient with id $otherId.\n");
+    echo "Keeping:  {$keep['name']}  ({$fmtMobile($keep['mobile'])})  [$keepId]\n";
+    echo "Removing: {$other['name']}  ({$fmtMobile($other['mobile'])})  [$otherId]\n";
+    echo "All of $otherId's appointments, treatment plans, payments and clinical notes move to $keepId, then $otherId is deleted.\n";
+    echo "Type YES to confirm: ";
+    if (trim(fgets(STDIN)) !== 'YES') exit("Cancelled.\n");
+
+    $pdo = pdo();
+    $pdo->beginTransaction();
+    try {
+        q('UPDATE appointments SET patient_id = ? WHERE patient_id = ?', [$keepId, $otherId]);
+        q('UPDATE records SET patient_id = ? WHERE patient_id = ?', [$keepId, $otherId]);
+        if (empty($keep['mobile']) && !empty($other['mobile'])) q('UPDATE patients SET mobile = ? WHERE id = ?', [$other['mobile'], $keepId]);
+        if (empty($keep['email']) && !empty($other['email'])) q('UPDATE patients SET email = ? WHERE id = ?', [$other['email'], $keepId]);
+        q('DELETE FROM patients WHERE id = ?', [$otherId]);
+        $pdo->commit();
+        echo "Merged.\n";
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        echo 'Failed, nothing was changed: ' . $e->getMessage() . "\n";
+    }
+    exit;
+}
+
+echo "Usage:\n  php manage-patients.php list\n  php manage-patients.php delete <id>\n  php manage-patients.php merge <keep-id> <other-id>\n";

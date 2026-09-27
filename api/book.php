@@ -38,10 +38,14 @@ $ref = with_lock(function () use ($start, $end, $sid, $name, $mobile, $email) {
         [$mobile, db_dt($ds), db_dt($de)])->fetch();
     if ($dup) throw new ApiError(409, 'You already have a booking on this day' . ($dup['ref'] ? " (reference {$dup['ref']})" : '') . '. Please call the clinic to change it.', 'duplicate');
 
-    $p = q('SELECT id FROM patients WHERE mobile = ? AND LOWER(name) = LOWER(?) LIMIT 1', [$mobile, $name])->fetch();
+    // Same person is recognised by name alone (trimmed, case-insensitive), even if they book with a new number,
+    // so the same name never creates a second patient record. Two different real patients who happen to share
+    // an identical name would be treated as one; add a middle name or suffix if that ever comes up.
+    $p = q('SELECT id FROM patients WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1', [$name])->fetch();
     $now = gmdate('Y-m-d H:i:s');
     if ($p) {
         $pid = $p['id'];
+        q('UPDATE patients SET mobile = ? WHERE id = ?', [$mobile, $pid]); // keep the phone number current
         if ($email !== '') q("UPDATE patients SET email = ? WHERE id = ? AND email = ''", [$email, $pid]);
     } else {
         $pid = new_id();
