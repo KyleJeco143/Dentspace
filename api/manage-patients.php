@@ -1,12 +1,31 @@
 <?php
 // Lists patients, removes one patient and everything tied to them, or merges two duplicate
-// patient records into one. Run on the server:
+// patient records into one. Identify a patient by their id (from 'list') OR just their mobile
+// number, which is far easier to type correctly in a console. Run on the server:
 //   php manage-patients.php list
-//   php manage-patients.php delete <id>
-//   php manage-patients.php merge <keep-id> <other-id>
+//   php manage-patients.php delete <id-or-mobile>
+//   php manage-patients.php merge <keep id-or-mobile> <other id-or-mobile>
 require __DIR__ . '/lib.php';
 $cmd = $argv[1] ?? '';
 $fmtMobile = fn($m) => $m ? preg_replace('/(\d{4})(\d{3})(\d{4})/', '$1 $2 $3', $m) : '(none)';
+
+/** Finds one patient by exact id, or by mobile number (any formatting: spaces, +63, leading 0 all accepted). */
+function resolve_patient(string $arg): ?array {
+    if (valid_id($arg)) {
+        $p = q('SELECT * FROM patients WHERE id = ?', [$arg])->fetch();
+        if ($p) return $p;
+    }
+    $digits = preg_replace('/\D/', '', $arg);
+    $digits = ltrim($digits, '0');
+    if ($digits === '') return null;
+    $matches = array_values(array_filter(
+        q('SELECT * FROM patients')->fetchAll(),
+        fn($p) => ltrim(preg_replace('/\D/', '', $p['mobile'] ?? ''), '0') === $digits && $digits !== ''
+    ));
+    if (count($matches) === 1) return $matches[0];
+    if (count($matches) > 1) { echo "More than one patient has that mobile number; use the id from 'list' instead.\n"; exit(1); }
+    return null;
+}
 
 if ($cmd === 'list') {
     foreach (q('SELECT id, name, mobile FROM patients ORDER BY name')->fetchAll() as $p) {
@@ -17,12 +36,13 @@ if ($cmd === 'list') {
 }
 
 if ($cmd === 'delete') {
-    $id = $argv[2] ?? '';
-    if (!valid_id($id)) exit("Usage: php manage-patients.php delete <id>\nRun 'list' first to get the id.\n");
-    $p = q('SELECT * FROM patients WHERE id = ?', [$id])->fetch();
-    if (!$p) exit("No patient with id $id.\n");
+    $arg = $argv[2] ?? '';
+    if ($arg === '') exit("Usage: php manage-patients.php delete <id-or-mobile>\nRun 'list' first.\n");
+    $p = resolve_patient($arg);
+    if (!$p) exit("No patient matches '$arg'.\n");
+    $id = $p['id'];
     echo "About to permanently delete:\n";
-    echo "  Patient:      {$p['name']}  ({$fmtMobile($p['mobile'])})\n";
+    echo "  Patient:      {$p['name']}  ({$fmtMobile($p['mobile'])})  [$id]\n";
     echo "  Appointments: " . (int)q('SELECT COUNT(*) FROM appointments WHERE patient_id = ?', [$id])->fetchColumn() . "\n";
     echo "  Records:      " . (int)q('SELECT COUNT(*) FROM records WHERE patient_id = ?', [$id])->fetchColumn() . " (treatment plans, payments, clinical notes)\n";
     echo "Type YES to confirm: ";
@@ -49,17 +69,18 @@ if ($cmd === 'delete') {
 }
 
 if ($cmd === 'merge') {
-    $keepId = $argv[2] ?? '';
-    $otherId = $argv[3] ?? '';
-    if (!valid_id($keepId) || !valid_id($otherId)) exit("Usage: php manage-patients.php merge <keep-id> <other-id>\nRun 'list' first to get both ids.\n");
-    if ($keepId === $otherId) exit("Those are the same id.\n");
-    $keep = q('SELECT * FROM patients WHERE id = ?', [$keepId])->fetch();
-    $other = q('SELECT * FROM patients WHERE id = ?', [$otherId])->fetch();
-    if (!$keep) exit("No patient with id $keepId.\n");
-    if (!$other) exit("No patient with id $otherId.\n");
+    $keepArg = $argv[2] ?? '';
+    $otherArg = $argv[3] ?? '';
+    if ($keepArg === '' || $otherArg === '') exit("Usage: php manage-patients.php merge <keep id-or-mobile> <other id-or-mobile>\nRun 'list' first.\n");
+    $keep = resolve_patient($keepArg);
+    $other = resolve_patient($otherArg);
+    if (!$keep) exit("No patient matches '$keepArg'.\n");
+    if (!$other) exit("No patient matches '$otherArg'.\n");
+    if ($keep['id'] === $other['id']) exit("Those are the same patient.\n");
+    $keepId = $keep['id']; $otherId = $other['id'];
     echo "Keeping:  {$keep['name']}  ({$fmtMobile($keep['mobile'])})  [$keepId]\n";
     echo "Removing: {$other['name']}  ({$fmtMobile($other['mobile'])})  [$otherId]\n";
-    echo "All of $otherId's appointments, treatment plans, payments and clinical notes move to $keepId, then $otherId is deleted.\n";
+    echo "All of {$other['name']}'s appointments, treatment plans, payments and clinical notes move to {$keep['name']}, then that record is deleted.\n";
     echo "Type YES to confirm: ";
     if (trim(fgets(STDIN)) !== 'YES') exit("Cancelled.\n");
 
@@ -80,4 +101,4 @@ if ($cmd === 'merge') {
     exit;
 }
 
-echo "Usage:\n  php manage-patients.php list\n  php manage-patients.php delete <id>\n  php manage-patients.php merge <keep-id> <other-id>\n";
+echo "Usage:\n  php manage-patients.php list\n  php manage-patients.php delete <id-or-mobile>\n  php manage-patients.php merge <keep id-or-mobile> <other id-or-mobile>\n";
