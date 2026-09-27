@@ -5,17 +5,28 @@
  *   Bookings - one row per booking (newest at the bottom)
  *   Patients - one row per patient (name + mobile), with visit count and last booking
  *
- * SETUP (once, signed in as dentspacedmd@gmail.com):
+ * Also creates a Google Calendar, "Dentspace Appointments", and keeps one event per active
+ * booking on it, so it can be viewed on a phone or shared with the dentist. This runs one way
+ * only (system -> Calendar): editing an event directly in Calendar does not change the booking.
+ *
+ * SETUP (once, signed in as the Google account you want everything to live in):
  *  1. Paste this whole file into Extensions > Apps Script (replace what is there).
  *  2. Change SECRET below to any long random text. Keep a copy; the server needs the same text.
- *  3. Run setup() once (press Run, allow access). It creates the two tabs.
+ *  3. Run setup() once (press Run, allow access -- this run also asks for Calendar access,
+ *     the first time, and creates the "Dentspace Appointments" calendar). It creates the two tabs.
  *  4. Deploy > New deployment > type "Web app": Execute as "Me", Who has access "Anyone". Deploy.
  *  5. Copy the Web app URL (starts with https://script.google.com/macros/s/...).
+ *
+ * Already deployed and only adding Calendar sync? Paste this updated file over the old one,
+ * keep the same SECRET, run setup() again (to grant Calendar access), then Deploy > Manage
+ * deployments > pencil icon > Version: New version > Deploy. The server needs no changes.
  */
 const SECRET = 'CHANGE-ME-TO-A-LONG-RANDOM-TEXT';
+const CALENDAR_NAME = 'Dentspace Appointments';
 
-const BOOKING_HEADERS = ['Reference', 'Booked at', 'Name', 'Mobile', 'Email', 'Service', 'Date', 'Time', 'Status', 'Source'];
+const BOOKING_HEADERS = ['Reference', 'Booked at', 'Name', 'Mobile', 'Email', 'Service', 'Date', 'Time', 'Status', 'Source', 'Calendar event'];
 const PATIENT_HEADERS = ['Name', 'Mobile', 'Email', 'Bookings', 'Last booking', 'First seen'];
+const CAL_EVENT_COL = 11; // "Calendar event" column in Bookings
 
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -28,6 +39,21 @@ function setup() {
   if (blank && ss.getSheets().length > 1 && blank.getLastRow() === 0) ss.deleteSheet(blank);
   ss.getSheetByName('Bookings').getRange('D:D').setNumberFormat('@'); // keep the leading 0 in phone numbers
   ss.getSheetByName('Patients').getRange('B:B').setNumberFormat('@');
+  ensureCalendar(); // creates "Dentspace Appointments" the first time, and asks for Calendar access
+}
+
+/** Finds (or creates, the first time) the shared "Dentspace Appointments" calendar. */
+function ensureCalendar() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('CAL_ID');
+  if (id) {
+    const cal = CalendarApp.getCalendarById(id);
+    if (cal) return cal;
+  }
+  const existing = CalendarApp.getCalendarsByName(CALENDAR_NAME);
+  const cal = existing.length ? existing[0] : CalendarApp.createCalendar(CALENDAR_NAME, { timeZone: 'Asia/Manila' });
+  props.setProperty('CAL_ID', cal.getId());
+  return cal;
 }
 
 function doPost(e) {
@@ -45,7 +71,10 @@ function doPost(e) {
       if (last > 1) {
         const refs = sheet.getRange(2, 1, last - 1, 1).getValues();
         const idx = refs.findIndex(r => String(r[0]) === String(d.ref));
-        if (idx >= 0) sheet.getRange(idx + 2, 9).setValue(clean(d.status));
+        if (idx >= 0) {
+          sheet.getRange(idx + 2, 9).setValue(clean(d.status));
+          if (d.status === 'CANCELLED' || d.status === 'NO_SHOW') removeCalendarEvent(sheet, idx + 2); // gone from the calendar too
+        }
       }
       return out('ok');
     }
@@ -53,9 +82,10 @@ function doPost(e) {
     // Phone numbers, dates and times are written as plain text so Sheets keeps "0917..." and "9:00 AM" as typed.
     const putText = (sh, row, col, val) => sh.getRange(row, col).setNumberFormat('@').setValue(String(val));
     const digits = v => String(v).replace(/\D/g, '').replace(/^0+/, ''); // 09170000009 and 9170000009 are the same person
-    bk.appendRow([d.ref, d.bookedAt, d.name, '', d.email, d.service, '', '', d.status, d.source].map(clean));
+    bk.appendRow([d.ref, d.bookedAt, d.name, '', d.email, d.service, '', '', d.status, d.source, ''].map(clean));
     const br = bk.getLastRow();
     putText(bk, br, 4, d.mobile); putText(bk, br, 7, d.date); putText(bk, br, 8, d.time);
+    if (d.start) addCalendarEvent(bk, br, d); // never lets a calendar problem stop the booking from being saved
 
     const pt = ss.getSheetByName('Patients');
     const rows = pt.getLastRow() > 1 ? pt.getRange(2, 1, pt.getLastRow() - 1, PATIENT_HEADERS.length).getValues() : [];
@@ -75,6 +105,35 @@ function doPost(e) {
     return out('ok');
   } finally {
     lock.releaseLock();
+  }
+}
+
+/** Adds one Calendar event for a newly booked row and remembers its id in the "Calendar event" column. */
+function addCalendarEvent(bk, row, d) {
+  try {
+    const cal = ensureCalendar();
+    const ev = cal.createEvent(
+      d.service + ' — ' + d.name,
+      new Date(d.start),
+      new Date(d.end || d.start),
+      { description: 'Reference: ' + d.ref + '\nMobile: ' + d.mobile + (d.email ? '\nEmail: ' + d.email : '') + '\nSource: ' + d.source }
+    );
+    bk.getRange(row, CAL_EVENT_COL).setValue(ev.getId());
+  } catch (e) {
+    // A Calendar hiccup should never lose a booking; the row above is already saved either way.
+  }
+}
+
+/** Deletes the Calendar event tied to a cancelled/no-show row, if one was created. */
+function removeCalendarEvent(sheet, row) {
+  try {
+    const id = sheet.getRange(row, CAL_EVENT_COL).getValue();
+    if (!id) return;
+    const ev = ensureCalendar().getEventById(String(id));
+    if (ev) ev.deleteEvent();
+    sheet.getRange(row, CAL_EVENT_COL).setValue('');
+  } catch (e) {
+    // Same rule: never let a calendar problem break the status update.
   }
 }
 

@@ -153,7 +153,9 @@ function save_changes(array $in, array $user): array {
             $local = $start->setTimezone(new DateTimeZone(CLINIC_TZ));
             $GLOBALS['ds_events'][] = ['ref' => $ref, 'bookedAt' => (new DateTimeImmutable('now', new DateTimeZone(CLINIC_TZ)))->format('Y-m-d H:i'),
                 'name' => $pp['name'], 'mobile' => $pp['mobile'], 'email' => $pp['email'], 'service' => SERVICE_NAMES[$sid] ?? $sid,
-                'date' => $local->format('Y-m-d'), 'time' => $local->format('g:i A'), 'status' => 'SCHEDULED', 'source' => 'Front desk'];
+                'date' => $local->format('Y-m-d'), 'time' => $local->format('g:i A'),
+                'start' => to_iso(db_dt($start)), 'end' => to_iso(db_dt($end)), // used to create the Google Calendar event
+                'status' => 'SCHEDULED', 'source' => 'Front desk'];
             audit($user, 'appointment.create', "$sid " . db_dt($start));
         }
 

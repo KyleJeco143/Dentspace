@@ -85,6 +85,7 @@ push_sheet([
     'service' => SERVICE_NAMES[$sid] ?? $sid,
     'date' => $start->setTimezone(new DateTimeZone(CLINIC_TZ))->format('Y-m-d'),
     'time' => $start->setTimezone(new DateTimeZone(CLINIC_TZ))->format('g:i A'),
+    'start' => to_iso(db_dt($start)), 'end' => to_iso(db_dt($end)), // used to create the Google Calendar event
     'status' => 'SCHEDULED', 'source' => 'Online booking',
 ]);
 exit;
