@@ -79,6 +79,28 @@ if ($a === 'save') {
     exit;
 }
 
+if ($a === 'delete-patient') {
+    if ($role !== 'owner') throw new ApiError(403, 'Only the owner can delete a patient.');
+    $in = require_post();
+    $id = $in['patientId'] ?? '';
+    if (!valid_id($id)) throw new ApiError(422, 'Invalid patient.');
+    $p = q('SELECT name FROM patients WHERE id = ?', [$id])->fetch();
+    if (!$p) throw new ApiError(404, 'Patient not found.');
+    with_lock(function () use ($id) {
+        $pdo = pdo();
+        $pdo->beginTransaction();
+        try {
+            delete_patient_and_records($id);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    });
+    audit($user, 'patient.delete', $p['name']);
+    json_out(['ok' => true]);
+}
+
 throw new ApiError(404, 'Unknown action');
 
 /* ------------------------------------------------------------------ */

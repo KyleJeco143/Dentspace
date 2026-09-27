@@ -51,14 +51,7 @@ if ($cmd === 'delete') {
     $pdo = pdo();
     $pdo->beginTransaction();
     try {
-        $payIds = array_column(q("SELECT id FROM records WHERE kind = 'payments' AND patient_id = ?", [$id])->fetchAll(), 'id');
-        if ($payIds) {
-            $in = implode(',', array_fill(0, count($payIds), '?'));
-            q("DELETE FROM receipts WHERE payment_id IN ($in)", $payIds);
-        }
-        q('DELETE FROM records WHERE patient_id = ?', [$id]);
-        q('DELETE FROM appointments WHERE patient_id = ?', [$id]);
-        q('DELETE FROM patients WHERE id = ?', [$id]);
+        delete_patient_and_records($id); // shared with the dashboard's own Delete patient button
         $pdo->commit();
         echo "Deleted.\n";
     } catch (Throwable $e) {

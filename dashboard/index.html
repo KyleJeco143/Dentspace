@@ -299,9 +299,9 @@ const VERB = {CONFIRMED:"Confirm",ARRIVED:"Check in",COMPLETED:"Mark completed",
 const DONE = {CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Marked completed",CANCELLED:"Cancelled",NO_SHOW:"Marked no-show"};
 const LABEL = {SCHEDULED:"Scheduled",CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Completed",CANCELLED:"Cancelled",NO_SHOW:"No-show"};
 const ROLES = {
-  owner:{name:"Owner",person:"Dr. Sample Owner",note:"Full access: schedule, patients, clinical notes, payments, reports and voids.",views:["today","patients","reports"],clinical:true,pay:true,void:true},
-  dentist:{name:"Dentist",person:"Dentspace Dentist",note:"Schedule, patients and clinical notes. Payments are view-only; reports are hidden.",views:["today","patients"],clinical:true,pay:false,void:false},
-  reception:{name:"Reception",person:"Front desk",note:"Schedule, patient contact details and payments. Clinical notes are hidden.",views:["today","patients"],clinical:false,pay:true,void:false}
+  owner:{name:"Owner",person:"Dr. Sample Owner",note:"Full access: schedule, patients, clinical notes, payments, reports and voids.",views:["today","patients","reports"],clinical:true,pay:true,void:true,admin:true},
+  dentist:{name:"Dentist",person:"Dentspace Dentist",note:"Schedule, patients and clinical notes. Payments are view-only; reports are hidden.",views:["today","patients"],clinical:true,pay:false,void:false,admin:false},
+  reception:{name:"Reception",person:"Front desk",note:"Schedule, patient contact details and payments. Clinical notes are hidden.",views:["today","patients"],clinical:false,pay:true,void:false,admin:false}
 };
 
 /* ---------- Time helpers (always Manila time) ---------- */
@@ -642,6 +642,7 @@ function patientSheet(pid,tab){
   <div class="sheet-body" style="padding-top:0">
     <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===pTab}" data-ptab="${k}" data-pid="${pid}">${l}</button>`).join("")}</div>
     ${pTab==="profile"?profileTab(p):pTab==="visits"?visitsTab(p):pTab==="clinical"?clinicalTab(p):ledgerTab(p)}
+    ${R().admin?`<div class="sheet-foot" style="justify-content:flex-start;margin-top:10px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost danger" type="button" data-action="delete-patient" data-pid="${pid}">Delete patient</button></div>`:""}
   </div>`);
   bindPatientForms(p);
 }
@@ -755,6 +756,20 @@ function voidPayment(id){
   const a=db.accounts.find(z=>z.id===x.accountId); if(a&&a.status==="PAID"&&paidOn(a.id)<a.agreed) a.status="ACTIVE";
   log("payment.void",`${x.receipt}: ${x.voidReason}`); save(); render(); patientSheet(x.patientId,"ledger"); toast(`Voided ${x.receipt}`);
 }
+async function deletePatient(pid){
+  const p=patient(pid); if(!p||!R().admin) return;
+  if(!confirm(`Permanently delete ${p.name} and all of their appointments, notes and payments? This cannot be undone.`)) return;
+  const typed=prompt(`Type the patient's name exactly to confirm:\n${p.name}`);
+  if(typed===null) return;
+  if(typed.trim()!==p.name){ toast("Name didn’t match; nothing was deleted."); return; }
+  try{
+    await api("delete-patient",{patientId:pid});
+    closeSheet(); await reload(); render();
+    toast(`${p.name} deleted.`);
+  }catch(err){
+    toast(err.message||"Couldn’t delete that patient.");
+  }
+}
 function accountSheet(){
   openSheet(head("Account",`${esc(R().person)}, ${R().name}`)+`<div class="sheet-body"><p style="color:var(--muted);font-size:14px">${R().note}</p>
   <div class="sheet-foot" style="justify-content:flex-start"><button class="btn" data-action="signout">Sign out</button></div></div>`);
@@ -777,6 +792,7 @@ document.addEventListener("click",e=>{
     case "close": closeSheet(); break;
     case "new-appt": newApptSheet(); break;
     case "book-for": newApptSheet({patientId:d.pid}); break;
+    case "delete-patient": deletePatient(d.pid); break;
     case "print": window.print(); break;
     case "menu": accountSheet(); break;
     case "signout": signOut(); break;

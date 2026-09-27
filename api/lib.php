@@ -169,6 +169,19 @@ function audit(array $u, string $action, string $detail): void {
         [gmdate('Y-m-d H:i:s'), $u['person'], $u['role'], $action, mb_substr($detail, 0, 500)]);
 }
 
+/** Permanently removes a patient and everything tied to them: appointments, treatment plans,
+ * payments (and their receipt numbers), and clinical notes. Caller wraps this in a transaction. */
+function delete_patient_and_records(string $id): void {
+    $payIds = array_column(q("SELECT id FROM records WHERE kind = 'payments' AND patient_id = ?", [$id])->fetchAll(), 'id');
+    if ($payIds) {
+        $in = implode(',', array_fill(0, count($payIds), '?'));
+        q("DELETE FROM receipts WHERE payment_id IN ($in)", $payIds);
+    }
+    q('DELETE FROM records WHERE patient_id = ?', [$id]);
+    q('DELETE FROM appointments WHERE patient_id = ?', [$id]);
+    q('DELETE FROM patients WHERE id = ?', [$id]);
+}
+
 /* ---- schema ---- */
 function migrate(): void {
     $t = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
