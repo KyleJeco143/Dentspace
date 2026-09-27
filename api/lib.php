@@ -6,7 +6,7 @@ const CLINIC_TZ = 'Asia/Manila';
 const SERVICES = [
     'svc-checkup' => 30, 'svc-clean' => 45, 'svc-fluoride' => 30, 'svc-sealant' => 30, 'svc-filling' => 60,
     'svc-veneers' => 120, 'svc-extraction' => 45, 'svc-root-canal' => 120, 'svc-crown' => 120, 'svc-denture' => 45,
-    'svc-whitening' => 120, 'svc-braces-adjust' => 45, 'svc-braces-install' => 120, 'svc-xray' => 15, 'svc-emergency' => 60,
+    'svc-whitening' => 120, 'svc-braces-adjust' => 30, 'svc-braces-install' => 120, 'svc-xray' => 15, 'svc-emergency' => 60,
 ];
 const SERVICE_NAMES = [
     'svc-checkup' => 'Check-up', 'svc-clean' => 'Cleaning', 'svc-fluoride' => 'Fluoride', 'svc-sealant' => 'Sealant',

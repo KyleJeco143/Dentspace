@@ -289,7 +289,7 @@ const SERVICES = [
   ["svc-checkup","Check-up",30],["svc-clean","Cleaning",45],["svc-fluoride","Fluoride",30],["svc-sealant","Sealant",30],
   ["svc-filling","Filling (Pasta)",60],["svc-veneers","Veneers",120],["svc-extraction","Extraction (Bunot)",45],
   ["svc-root-canal","Root canal",120],["svc-crown","Crown",120],["svc-denture","Denture",45],["svc-whitening","Whitening",120],
-  ["svc-braces-adjust","Braces adjustment",45],["svc-braces-install","Braces installation",120],["svc-xray","X-ray",15],
+  ["svc-braces-adjust","Braces adjustment",30],["svc-braces-install","Braces installation",120],["svc-xray","X-ray",15],
   ["svc-emergency","Emergency",60]
 ].map(([id,name,dur])=>({id,name,dur}));
 const svc = id => SERVICES.find(s=>s.id===id) || {name:"Unknown service",dur:30};

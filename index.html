@@ -225,7 +225,7 @@ h1,h2,h3,p{margin:0}
 <script>
 "use strict";
 const TZ="Asia/Manila";
-const SERVICES=[["svc-checkup","Check-up",30,"15–30 min"],["svc-clean","Cleaning",45,"20–45 min"],["svc-fluoride","Fluoride",30,"15–30 min"],["svc-sealant","Sealant",30,"15–30 min"],["svc-filling","Filling (Pasta)",60,"30–60 min"],["svc-extraction","Extraction (Bunot)",45,"20–45 min"],["svc-root-canal","Root canal",120,"1–2 hrs"],["svc-crown","Crown",120,"1–2 hrs"],["svc-veneers","Veneers",120,"1–2 hrs"],["svc-denture","Denture",45,"20–45 min"],["svc-whitening","Whitening",120,"1–2 hrs"],["svc-braces-adjust","Braces adjustment",45,"20–45 min"],["svc-braces-install","Braces installation",120,"1–2 hrs"],["svc-xray","X-ray",15,"5–15 min"],["svc-emergency","Emergency",60,"30–60 min"]].map(([id,name,dur,label])=>({id,name,dur,label}));
+const SERVICES=[["svc-checkup","Check-up",30,"15–30 min"],["svc-clean","Cleaning",45,"20–45 min"],["svc-fluoride","Fluoride",30,"15–30 min"],["svc-sealant","Sealant",30,"15–30 min"],["svc-filling","Filling (Pasta)",60,"30–60 min"],["svc-extraction","Extraction (Bunot)",45,"20–45 min"],["svc-root-canal","Root canal",120,"1–2 hrs"],["svc-crown","Crown",120,"1–2 hrs"],["svc-veneers","Veneers",120,"1–2 hrs"],["svc-denture","Denture",45,"20–45 min"],["svc-whitening","Whitening",120,"1–2 hrs"],["svc-braces-adjust","Braces adjustment",30,"15–30 min"],["svc-braces-install","Braces installation",120,"1–2 hrs"],["svc-xray","X-ray",15,"5–15 min"],["svc-emergency","Emergency",60,"30–60 min"]].map(([id,name,dur,label])=>({id,name,dur,label}));
 const LEAD_MIN=60, DAYS_AHEAD=21;
 
 const fDay=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"});
