@@ -71,9 +71,34 @@ if ($a === 'state') {
 }
 
 if ($a === 'save') {
+    $GLOBALS['ds_events'] = [];
     $in = require_post();
     $fixes = with_lock(fn() => save_changes($in, $user));
-    json_out(['ok' => true, 'fixes' => $fixes]);
+    respond_and_continue(['ok' => true, 'fixes' => $fixes]);
+    foreach ($GLOBALS['ds_events'] as $ev) if (!empty($ev['mobile']) || ($ev['action'] ?? '') === 'status') push_sheet($ev);
+    exit;
+}
+
+if ($a === 'delete-patient') {
+    if ($role !== 'owner') throw new ApiError(403, 'Only the owner can delete a patient.');
+    $in = require_post();
+    $id = $in['patientId'] ?? '';
+    if (!valid_id($id)) throw new ApiError(422, 'Invalid patient.');
+    $p = q('SELECT name FROM patients WHERE id = ?', [$id])->fetch();
+    if (!$p) throw new ApiError(404, 'Patient not found.');
+    with_lock(function () use ($id) {
+        $pdo = pdo();
+        $pdo->beginTransaction();
+        try {
+            delete_patient_and_records($id);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    });
+    audit($user, 'patient.delete', $p['name']);
+    json_out(['ok' => true]);
 }
 
 throw new ApiError(404, 'Unknown action');
@@ -132,6 +157,7 @@ function save_changes(array $in, array $user): array {
                     if (!in_array($status, NEXT[$old['status']], true)) throw new ApiError(409, 'That status change isn’t allowed.');
                     q('UPDATE appointments SET status=?, updated_at=? WHERE id=?', [$status, $now, $x['id']]);
                     audit($user, 'appointment.status', "{$old['status']} → $status ({$x['id']})");
+                    if (!empty($old['ref'])) $GLOBALS['ds_events'][] = ['action' => 'status', 'ref' => $old['ref'], 'status' => $status];
                 }
                 continue;
             }
@@ -141,9 +167,21 @@ function save_changes(array $in, array $user): array {
             $start = parse_iso((string)($x['start'] ?? ''));
             if (!$start || !within_hours($start, SERVICES[$sid])) throw new ApiError(422, 'That time is outside clinic hours.');
             $end = $start->modify('+' . SERVICES[$sid] . ' minutes');
-            if (overlaps(db_dt($start), db_dt($end))) throw new ApiError(409, 'That time was just taken. Pick another.', 'slot_taken');
-            q("INSERT INTO appointments (id, patient_id, service_id, start_at, end_at, status, source, created_at) VALUES (?,?,?,?,?,'SCHEDULED',?,?)",
-                [$x['id'], $x['patientId'], $sid, db_dt($start), db_dt($end), ($x['source'] ?? '') === 'walkin' ? 'walkin' : 'staff', $now]);
+            $past = !empty($x['past']) && ($x['source'] ?? '') === 'walkin'; // walk-in already seen, recorded afterwards
+            if ($past) {
+                if ($start->getTimestamp() > time() + 300) throw new ApiError(422, 'A recorded visit must be in the past.');
+            } elseif (overlaps(db_dt($start), db_dt($end))) throw new ApiError(409, 'That time was just taken. Pick another.', 'slot_taken');
+            $initial = $past ? 'COMPLETED' : 'SCHEDULED';
+            $ref = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+            q("INSERT INTO appointments (id, patient_id, service_id, start_at, end_at, status, source, ref, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                [$x['id'], $x['patientId'], $sid, db_dt($start), db_dt($end), $initial, ($x['source'] ?? '') === 'walkin' ? 'walkin' : 'staff', $ref, $now]);
+            $pp = q('SELECT name, mobile, email FROM patients WHERE id = ?', [$x['patientId']])->fetch();
+            $local = $start->setTimezone(new DateTimeZone(CLINIC_TZ));
+            $GLOBALS['ds_events'][] = ['ref' => $ref, 'bookedAt' => (new DateTimeImmutable('now', new DateTimeZone(CLINIC_TZ)))->format('Y-m-d H:i'),
+                'name' => $pp['name'], 'mobile' => $pp['mobile'], 'email' => $pp['email'], 'service' => SERVICE_NAMES[$sid] ?? $sid,
+                'date' => $local->format('Y-m-d'), 'time' => $local->format('g:i A'),
+                'start' => to_iso(db_dt($start)), 'end' => to_iso(db_dt($end)), // used to create the Google Calendar event
+                'status' => $initial, 'source' => 'Front desk'];
             audit($user, 'appointment.create', "$sid " . db_dt($start));
         }
 
