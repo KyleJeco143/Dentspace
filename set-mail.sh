@@ -4,8 +4,8 @@
 set -euo pipefail
 CONF=/var/www/dentspace/api/config.php
 [ -f "$CONF" ] || { echo "config.php not found. Run install.sh first."; exit 1; }
-read -r -p "Gmail address that sends and receives alerts [dentspacedmd@gmail.com]: " GM
-GM="${GM:-dentspacedmd@gmail.com}"
+read -r -p "Gmail address that sends and receives alerts [dentspacee@gmail.com]: " GM
+GM="${GM:-dentspacee@gmail.com}"
 read -r -s -p "Gmail app password (16 letters, hidden as you type): " PW
 echo
 PW="${PW// /}"
