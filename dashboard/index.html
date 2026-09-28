@@ -289,7 +289,7 @@ const SERVICES = [
   ["svc-checkup","Check-up",30],["svc-clean","Cleaning",45],["svc-fluoride","Fluoride",30],["svc-sealant","Sealant",30],
   ["svc-filling","Filling (Pasta)",60],["svc-veneers","Veneers",120],["svc-extraction","Extraction (Bunot)",45],
   ["svc-root-canal","Root canal",120],["svc-crown","Crown",120],["svc-denture","Denture",45],["svc-whitening","Whitening",120],
-  ["svc-braces-adjust","Braces adjustment",30],["svc-braces-install","Braces installation",120],["svc-xray","X-ray",15],
+  ["svc-braces-adjust","Braces adjustment",45],["svc-braces-install","Braces installation",120],["svc-xray","X-ray",15],
   ["svc-emergency","Emergency",60]
 ].map(([id,name,dur])=>({id,name,dur}));
 const svc = id => SERVICES.find(s=>s.id===id) || {name:"Unknown service",dur:30};
@@ -299,9 +299,9 @@ const VERB = {CONFIRMED:"Confirm",ARRIVED:"Check in",COMPLETED:"Mark completed",
 const DONE = {CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Marked completed",CANCELLED:"Cancelled",NO_SHOW:"Marked no-show"};
 const LABEL = {SCHEDULED:"Scheduled",CONFIRMED:"Confirmed",ARRIVED:"Checked in",COMPLETED:"Completed",CANCELLED:"Cancelled",NO_SHOW:"No-show"};
 const ROLES = {
-  owner:{name:"Owner",person:"Dr. Sample Owner",note:"Full access: schedule, patients, clinical notes, payments, reports and voids.",views:["today","patients","reports"],clinical:true,pay:true,void:true,admin:true},
-  dentist:{name:"Dentist",person:"Dentspace Dentist",note:"Schedule, patients and clinical notes. Payments are view-only; reports are hidden.",views:["today","patients"],clinical:true,pay:false,void:false,admin:false},
-  reception:{name:"Reception",person:"Front desk",note:"Schedule, patient contact details and payments. Clinical notes are hidden.",views:["today","patients"],clinical:false,pay:true,void:false,admin:false}
+  owner:{name:"Owner",person:"Dr. Sample Owner",note:"Full access: schedule, patients, clinical notes, payments, reports and voids.",views:["today","patients","reports"],clinical:true,pay:true,void:true},
+  dentist:{name:"Dentist",person:"Dentspace Dentist",note:"Schedule, patients and clinical notes. Payments are view-only; reports are hidden.",views:["today","patients"],clinical:true,pay:false,void:false},
+  reception:{name:"Reception",person:"Front desk",note:"Schedule, patient contact details and payments. Clinical notes are hidden.",views:["today","patients"],clinical:false,pay:true,void:false}
 };
 
 /* ---------- Time helpers (always Manila time) ---------- */
@@ -554,7 +554,7 @@ function apptSheet(id){
       <dt>Time</dt><dd>${tm(a.start)} to ${tm(a.end)}</dd>
       <dt>Status</dt><dd><span class="chip st-${a.status}">${LABEL[a.status]}</span></dd>
       <dt>Mobile</dt><dd>${p?.mobile?`<a href="tel:${esc(p.mobile)}" style="color:var(--accent)">${esc(fmtMobile(p.mobile))}</a>`:"—"}</dd>
-      <dt>Booked via</dt><dd>${a.source==="booking_site"?"Online booking":"Front desk"}</dd>
+      <dt>Booked via</dt><dd>${a.source==="booking_site"?"Online booking":a.source==="walkin"?"Walk-in":"Front desk"}</dd>
       ${a.ref?`<dt>Reference</dt><dd>${esc(a.ref)}</dd>`:""}
     </dl>
     <div class="sheet-foot" style="justify-content:flex-start">
@@ -600,7 +600,9 @@ function newApptSheet(prefill={}){
       <div class="field"><label for="fMobile">Mobile number</label><input id="fMobile" class="input" inputmode="tel" placeholder="09XX XXX XXXX" maxlength="16"></div>
     </div>
     <div class="field"><label for="fSvc">Service</label><select id="fSvc" class="input">${SERVICES.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.dur} min)</option>`).join("")}</select></div>
-    <div class="grid2">
+    <div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="fWalk"> Walk-in (no set time)</label>
+      <small id="fWalkInfo" style="color:var(--muted)" hidden></small></div>
+    <div class="grid2" id="fWhen">
       <div class="field"><label for="fDay">Date</label><input id="fDay" type="date" class="input" value="${dk}" min="${today()}"></div>
       <div class="field"><label for="fTime">Time</label><select id="fTime" class="input"></select></div>
     </div>
@@ -612,20 +614,24 @@ function newApptSheet(prefill={}){
     const d=$("#fDay").value, dur=svc($("#fSvc").value).dur;
     const slots = d ? freeSlots(d,dur) : [];
     $("#fTime").innerHTML = slots.length ? slots.map(m=>`<option value="${m}">${tm(at(d,m))}</option>`).join("") : `<option value="">No open times</option>`;
+    const walk = $("#fWalk").checked, nx = freeSlots(today(),dur)[0];
+    $("#fWhen").hidden = walk; $("#fWalkInfo").hidden = !walk;
+    $("#fWalkInfo").textContent = nx===undefined ? "No open gap left today." : `Next open gap today: ${tm(at(today(),nx))}. Booked patients are never bumped.`;
   };
-  ["fPatient","fSvc","fDay"].forEach(id=>$("#"+id).addEventListener("change",sync)); sync();
+  ["fPatient","fSvc","fDay","fWalk"].forEach(id=>$("#"+id).addEventListener("change",sync)); sync();
   $("#apptForm").addEventListener("submit",e=>{
     e.preventDefault(); const err=$("#fErr"); err.textContent="";
     let pid=$("#fPatient").value;
-    const name=$("#fName").value.trim(), mob=normMobile($("#fMobile").value), d=$("#fDay").value, m=$("#fTime").value, sid=$("#fSvc").value;
+    const walk=$("#fWalk").checked, name=$("#fName").value.trim(), mob=normMobile($("#fMobile").value), sid=$("#fSvc").value;
+    let d=$("#fDay").value, m=$("#fTime").value;
+    if(walk){ d=today(); const nx=freeSlots(d,svc(sid).dur)[0]; m = nx===undefined ? "" : String(nx); }
     if(!pid){ if(name.length<2){err.textContent="Enter the patient’s full name.";$("#fName").focus();return;} if(!mob){err.textContent="Enter a valid mobile number starting with 09, for example 0917 123 4567.";$("#fMobile").focus();return;}
-      const norm=s=>String(s||"").trim().replace(/\s+/g," ").toLowerCase();
-      const dup=db.patients.find(p=>norm(p.name)===norm(name)); if(dup){ pid=dup.id; dup.mobile=mob; } }
-    if(!d||m===""){err.textContent="Choose a date with an open time.";return;}
+      const dup=db.patients.find(p=>p.mobile===mob && p.name.toLowerCase()===name.toLowerCase()); if(dup) pid=dup.id; }
+    if(!d||m===""){err.textContent=walk?"No open gap left today for this service. Untick walk-in to book another day.":"Choose a date with an open time.";return;}
     const dur=svc(sid).dur; if(!freeSlots(d,dur).includes(+m)){err.textContent="That time was just taken. Pick another.";sync();return;}
     if(!pid){ pid=uid(); db.patients.push({id:pid,name,mobile:mob,email:"",birthDate:"",address:"",allergies:"",conditions:"",consent:false,createdAt:new Date().toISOString()}); log("patient.create",name); }
     const start=at(d,+m);
-    db.appts.push({id:uid(),patientId:pid,serviceId:sid,start,end:new Date(+new Date(start)+dur*60000).toISOString(),status:"SCHEDULED",source:"staff",createdAt:new Date().toISOString()});
+    db.appts.push({id:uid(),patientId:pid,serviceId:sid,start,end:new Date(+new Date(start)+dur*60000).toISOString(),status:"SCHEDULED",source:walk?"walkin":"staff",createdAt:new Date().toISOString()});
     log("appointment.create",`${svc(sid).name} ${start}`); save(); closeSheet(); selDay=d; view="today"; render();
     toast(`Booked ${patient(pid).name} for ${tm(start)}`);
   });
@@ -642,7 +648,6 @@ function patientSheet(pid,tab){
   <div class="sheet-body" style="padding-top:0">
     <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===pTab}" data-ptab="${k}" data-pid="${pid}">${l}</button>`).join("")}</div>
     ${pTab==="profile"?profileTab(p):pTab==="visits"?visitsTab(p):pTab==="clinical"?clinicalTab(p):ledgerTab(p)}
-    ${R().admin?`<div class="sheet-foot" style="justify-content:flex-start;margin-top:10px;padding-top:14px;border-top:1px solid var(--line)"><button class="btn ghost danger" type="button" data-action="delete-patient" data-pid="${pid}">Delete patient</button></div>`:""}
   </div>`);
   bindPatientForms(p);
 }
@@ -756,20 +761,6 @@ function voidPayment(id){
   const a=db.accounts.find(z=>z.id===x.accountId); if(a&&a.status==="PAID"&&paidOn(a.id)<a.agreed) a.status="ACTIVE";
   log("payment.void",`${x.receipt}: ${x.voidReason}`); save(); render(); patientSheet(x.patientId,"ledger"); toast(`Voided ${x.receipt}`);
 }
-async function deletePatient(pid){
-  const p=patient(pid); if(!p||!R().admin) return;
-  if(!confirm(`Permanently delete ${p.name} and all of their appointments, notes and payments? This cannot be undone.`)) return;
-  const typed=prompt(`Type the patient's name exactly to confirm:\n${p.name}`);
-  if(typed===null) return;
-  if(typed.trim()!==p.name){ toast("Name didn’t match; nothing was deleted."); return; }
-  try{
-    await api("delete-patient",{patientId:pid});
-    closeSheet(); await reload(); render();
-    toast(`${p.name} deleted.`);
-  }catch(err){
-    toast(err.message||"Couldn’t delete that patient.");
-  }
-}
 function accountSheet(){
   openSheet(head("Account",`${esc(R().person)}, ${R().name}`)+`<div class="sheet-body"><p style="color:var(--muted);font-size:14px">${R().note}</p>
   <div class="sheet-foot" style="justify-content:flex-start"><button class="btn" data-action="signout">Sign out</button></div></div>`);
@@ -792,7 +783,6 @@ document.addEventListener("click",e=>{
     case "close": closeSheet(); break;
     case "new-appt": newApptSheet(); break;
     case "book-for": newApptSheet({patientId:d.pid}); break;
-    case "delete-patient": deletePatient(d.pid); break;
     case "print": window.print(); break;
     case "menu": accountSheet(); break;
     case "signout": signOut(); break;
