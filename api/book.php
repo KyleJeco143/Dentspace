@@ -11,7 +11,7 @@ if (throttle_count("book:$ip", 3600) >= 6) throw new ApiError(429, 'Too many boo
 $sid = $in['serviceId'] ?? '';
 if (!is_string($sid) || !isset(SERVICES[$sid])) throw new ApiError(422, 'Choose a service.');
 $dur = SERVICES[$sid];
-$name = str($in['name'] ?? '', 80);
+$name = mb_strtoupper(str($in['name'] ?? '', 80), 'UTF-8'); // patient names are stored in CAPITALS
 if (mb_strlen($name) < 2 || !preg_match('/\p{L}/u', $name)) throw new ApiError(422, 'Enter your full name.');
 $mobile = norm_mobile($in['mobile'] ?? '');
 if ($mobile === '') throw new ApiError(422, 'Enter an 11-digit mobile number starting with 09.');

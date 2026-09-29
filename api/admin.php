@@ -121,7 +121,7 @@ function save_changes(array $in, array $user): array {
         /* patients */
         foreach (list_of($in['patients'] ?? null) as $p) {
             if (!is_array($p) || !valid_id($p['id'] ?? null)) throw new ApiError(422, 'Invalid patient.');
-            $name = str($p['name'] ?? '', 80);
+            $name = mb_strtoupper(str($p['name'] ?? '', 80), 'UTF-8'); // patient names are stored in CAPITALS
             if (mb_strlen($name) < 2) throw new ApiError(422, 'Enter the patient’s full name.');
             $mobRaw = trim((string)($p['mobile'] ?? ''));
             $mobile = $mobRaw === '' ? '' : norm_mobile($mobRaw);
