@@ -508,6 +508,7 @@ function renderReports(){
   const t=today(), month=t.slice(0,7);
   const live = db.payments.filter(p=>!p.voided);
   const collectedMonth = live.filter(p=>dayKey(p.paidAt).slice(0,7)===month).reduce((s,p)=>s+p.amount,0);
+  const collectedToday = live.filter(p=>dayKey(p.paidAt)===t).reduce((s,p)=>s+p.amount,0);
   const outstanding = db.patients.reduce((s,p)=>s+Math.max(balanceOf(p.id),0),0);
   const monthAppts = db.appts.filter(a=>dayKey(a.start).slice(0,7)===month && dayKey(a.start)<=t);
   const completed = monthAppts.filter(a=>a.status==="COMPLETED").length;
@@ -520,7 +521,11 @@ function renderReports(){
   const top = Object.entries(byService).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const mlabel = m => new Intl.DateTimeFormat("en-PH",{month:"short",timeZone:TZ}).format(noon(m+"-15"));
   const owed = db.patients.map(p=>[p,balanceOf(p.id)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  const byDay = {}; live.filter(p=>dayKey(p.paidAt).slice(0,7)===month).forEach(p=>{ const dk=dayKey(p.paidAt); byDay[dk]=(byDay[dk]||0)+p.amount; });
+  const days = Object.keys(byDay).sort().reverse();
+  const dlabel = dk => new Intl.DateTimeFormat("en-PH",{weekday:"short",month:"short",day:"numeric",timeZone:TZ}).format(noon(dk));
   return `<div class="kpis">
+    <div class="kpi"><span>Collected today</span><b>${peso(collectedToday)}</b></div>
     <div class="kpi"><span>Collected this month</span><b>${peso(collectedMonth)}</b></div>
     <div class="kpi"><span>Outstanding balances</span><b>${peso(outstanding)}</b></div>
     <div class="kpi"><span>Visits completed</span><b>${completed}</b></div>
@@ -536,7 +541,10 @@ function renderReports(){
       <h3 style="margin-top:26px">Balances to follow up</h3>
       <div class="rank">${owed.length?owed.map(([p,b])=>`<div><button class="btn ghost sm" style="padding:0;min-height:0" data-patient="${p.id}">${esc(p.name)}</button><b>${peso(b)}</b></div>`).join(""):`<div><span>Every account is paid up</span></div>`}</div>
     </section>
-  </div>`;
+  </div>
+  <section class="panel" style="margin-top:20px"><h3>Daily collections, ${mlabel(month)}</h3>
+    <div class="rank" style="max-height:340px;overflow-y:auto">${days.length?days.map(dk=>`<div>${dk===t?`<b>${dlabel(dk)} (today)</b>`:`<span>${dlabel(dk)}</span>`}<b>${peso(byDay[dk])}</b></div>`).join(""):`<div><span>No payments recorded this month yet</span></div>`}</div>
+  </section>`;
 }
 
 /* ---------- Sheets ---------- */
@@ -596,7 +604,7 @@ function newApptSheet(prefill={}){
     <div class="field"><label for="fPatient">Patient</label>
       <select id="fPatient" class="input"><option value="">New patient</option>${db.patients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}" ${prefill.patientId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
     <div class="grid2" id="newPt">
-      <div class="field"><label for="fName">Full name</label><input id="fName" class="input" autocomplete="off" maxlength="80"></div>
+      <div class="field"><label for="fName">Full name</label><input id="fName" class="input" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase" maxlength="80"></div>
       <div class="field"><label for="fMobile">Mobile number</label><input id="fMobile" class="input" inputmode="tel" placeholder="09XX XXX XXXX" maxlength="16"></div>
     </div>
     <div class="field"><label for="fSvc">Service</label><select id="fSvc" class="input">${SERVICES.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.dur} min)</option>`).join("")}</select></div>
@@ -629,7 +637,7 @@ function newApptSheet(prefill={}){
   $("#apptForm").addEventListener("submit",e=>{
     e.preventDefault(); const err=$("#fErr"); err.textContent="";
     let pid=$("#fPatient").value;
-    const walk=$("#fWalk").checked, name=$("#fName").value.trim(), mob=normMobile($("#fMobile").value), sid=$("#fSvc").value;
+    const walk=$("#fWalk").checked, name=$("#fName").value.trim().toUpperCase(), mob=normMobile($("#fMobile").value), sid=$("#fSvc").value;
     let d=$("#fDay").value, m=$("#fTime").value;
     const past=walk&&$("#fPast").checked;
     if(walk&&!past){ d=today(); const nx=freeSlots(d,svc(sid).dur)[0]; m = nx===undefined ? "" : String(nx); }
@@ -666,7 +674,7 @@ function patientSheet(pid,tab){
 function profileTab(p){
   return `<form id="profForm" class="sheet-body" style="padding:0" novalidate>
     <div class="grid2">
-      <div class="field"><label for="pName">Full name</label><input id="pName" class="input" value="${esc(p.name)}" maxlength="80"></div>
+      <div class="field"><label for="pName">Full name</label><input id="pName" class="input" value="${esc(p.name)}" autocapitalize="characters" style="text-transform:uppercase" maxlength="80"></div>
       <div class="field"><label for="pMob">Mobile</label><input id="pMob" class="input" inputmode="tel" value="${esc(p.mobile)}"></div>
       <div class="field"><label for="pEmail">Email</label><input id="pEmail" type="email" class="input" value="${esc(p.email)}"></div>
       <div class="field"><label for="pBirth">Birth date</label><input id="pBirth" type="date" class="input" value="${esc(p.birthDate)}"></div>
@@ -722,7 +730,7 @@ function nextReceipt(){ db.seq=(db.seq||0)+1; return "DS-"+today().slice(0,4)+"-
 function bindPatientForms(p){
   const f=$("#profForm");
   if(f) f.addEventListener("submit",e=>{ e.preventDefault(); const err=$("#pErr");
-    const name=$("#pName").value.trim(), mob=$("#pMob").value.trim()?normMobile($("#pMob").value):"", email=$("#pEmail").value.trim();
+    const name=$("#pName").value.trim().toUpperCase(), mob=$("#pMob").value.trim()?normMobile($("#pMob").value):"", email=$("#pEmail").value.trim();
     if(name.length<2){err.textContent="Enter the patient’s full name.";return;}
     if($("#pMob").value.trim()&&!mob){err.textContent="Mobile must start with 09 and have 11 digits.";return;}
     if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent="Enter a valid email or leave it blank.";return;}
