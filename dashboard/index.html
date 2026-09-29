@@ -395,6 +395,7 @@ function balanceOf(pid){
   return agreed - paid;
 }
 const paidOn = aid => db.payments.filter(p=>p.accountId===aid && !p.voided).reduce((s,p)=>s+p.amount,0);
+const bracesAcct = pid => db.accounts.find(a=>a.patientId===pid && a.status==="ACTIVE" && /brace/i.test(a.name));
 
 /* ---------- Icons ---------- */
 const IC = {
@@ -608,6 +609,14 @@ function newApptSheet(prefill={}){
       <div class="field"><label for="fMobile">Mobile number</label><input id="fMobile" class="input" inputmode="tel" placeholder="09XX XXX XXXX" maxlength="16"></div>
     </div>
     <div class="field"><label for="fSvc">Service</label><select id="fSvc" class="input">${SERVICES.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.dur} min)</option>`).join("")}</select></div>
+    <div class="acct" id="fBraceWrap" hidden style="margin-top:4px">
+      <b id="fBraceTitle" style="display:block;margin-bottom:10px;font-size:14px"></b>
+      <div class="grid2">
+        <div class="field"><label for="fPayAmt">Payment today (₱, optional)</label><input id="fPayAmt" class="input" inputmode="decimal" placeholder="0.00"></div>
+        <div class="field"><label for="fPayMethod">Method</label><select id="fPayMethod" class="input"><option value="CASH">Cash</option><option value="GCASH">GCash</option><option value="CARD">Card</option><option value="BANK">Bank transfer</option></select></div>
+      </div>
+      <div class="field"><label for="fPayRef">Reference no.</label><input id="fPayRef" class="input" placeholder="Optional for cash"></div>
+    </div>
     <div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="fWalk"> Walk-in (no set time)</label>
       <label id="fPastWrap" hidden style="display:flex;gap:8px;align-items:center;font-weight:600;margin-top:8px"><input type="checkbox" id="fPast"> Already seen — record a past visit</label>
       <small id="fWalkInfo" style="color:var(--muted)" hidden></small></div>
@@ -622,6 +631,9 @@ function newApptSheet(prefill={}){
   let lastPast=false;
   const sync=()=>{
     $("#newPt").hidden = !!$("#fPatient").value;
+    const pid0=$("#fPatient").value, acct=pid0&&R().pay&&/^svc-braces/.test($("#fSvc").value)?bracesAcct(pid0):null;
+    $("#fBraceWrap").hidden=!acct;
+    if(acct){ const bal=acct.agreed-paidOn(acct.id); $("#fBraceTitle").textContent=`${acct.name} — balance ${peso(bal)}`; $("#fPayAmt").dataset.max=bal; }
     const walk=$("#fWalk").checked, past=walk&&$("#fPast").checked, dIn=$("#fDay"), dur=svc($("#fSvc").value).dur;
     $("#fPastWrap").hidden=!walk; $("#fWhen").hidden = walk && !past; $("#fBtn").textContent = past ? "Record visit" : "Book appointment";
     if(past){ dIn.max=today(); dIn.removeAttribute("min"); if(!lastPast || !dIn.value || dIn.value>today()) dIn.value = selDay<=today()?selDay:today(); }
@@ -648,11 +660,27 @@ function newApptSheet(prefill={}){
     const dur=svc(sid).dur;
     if(past){ if(!pastSlots(d,dur).includes(+m)){err.textContent="Pick a time that has already passed.";sync();return;} }
     else if(!freeSlots(d,dur).includes(+m)){err.textContent="That time was just taken. Pick another.";sync();return;}
+    const acct=pid&&R().pay&&/^svc-braces/.test(sid)?bracesAcct(pid):null, amtStr=$("#fPayAmt").value.trim();
+    let payAmt=0, payMethod="CASH", payRef="";
+    if(acct&&amtStr){
+      payAmt=toCents(amtStr); payMethod=$("#fPayMethod").value; payRef=$("#fPayRef").value.trim();
+      if(!(payAmt>0)){err.textContent="Enter a valid payment amount like 1500 or 1500.50.";return;}
+      const bal=acct.agreed-paidOn(acct.id);
+      if(payAmt>bal){err.textContent=`That’s more than the ${peso(bal)} balance on ${acct.name}.`;return;}
+      if(payMethod!=="CASH"&&!payRef){err.textContent="Add the reference number for GCash, card or bank payments.";return;}
+    }
     if(!pid){ pid=uid(); db.patients.push({id:pid,name,mobile:mob,email:"",birthDate:"",address:"",allergies:"",conditions:"",consent:false,createdAt:new Date().toISOString()}); log("patient.create",name); }
     const start=at(d,+m);
     db.appts.push({id:uid(),patientId:pid,serviceId:sid,start,end:new Date(+new Date(start)+dur*60000).toISOString(),status:past?"COMPLETED":"SCHEDULED",source:walk?"walkin":"staff",...(past?{past:true}:{}),createdAt:new Date().toISOString()});
-    log("appointment.create",`${svc(sid).name} ${start}`); save(); closeSheet(); selDay=d; view="today"; render();
-    toast(past?`Recorded ${patient(pid).name} — ${tm(start)}`:`Booked ${patient(pid).name} for ${tm(start)}`);
+    log("appointment.create",`${svc(sid).name} ${start}`);
+    let payMsg="";
+    if(acct&&payAmt>0){
+      const pay={id:uid(),accountId:acct.id,patientId:pid,amount:payAmt,method:payMethod,ref:payRef,paidAt:new Date().toISOString(),receipt:nextReceipt(),voided:false,voidReason:"",by:R().person};
+      db.payments.push(pay); if(paidOn(acct.id)>=acct.agreed) acct.status="PAID";
+      log("payment.create",pay.receipt); payMsg=`, ${peso(payAmt)} recorded toward ${acct.name}`;
+    }
+    save(); closeSheet(); selDay=d; view="today"; render();
+    toast((past?`Recorded ${patient(pid).name} — ${tm(start)}`:`Booked ${patient(pid).name} for ${tm(start)}`)+payMsg);
   });
 }
 function normMobile(v){ let s=String(v).replace(/[\s-]/g,""); if(s.startsWith("+63")) s="0"+s.slice(3); else if(s.startsWith("63")&&s.length===12) s="0"+s.slice(2); return /^09\d{9}$/.test(s)?s:""; }
